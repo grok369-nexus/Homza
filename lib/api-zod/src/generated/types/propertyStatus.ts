@@ -13,5 +13,6 @@ export const PropertyStatus = {
   available: 'available',
   pending: 'pending',
   rented: 'rented',
+  paused: 'paused',
   hidden: 'hidden',
 } as const;

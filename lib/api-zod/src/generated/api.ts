@@ -24,7 +24,10 @@ export const ListPropertiesQueryParams = zod.object({
   "location": zod.coerce.string().optional(),
   "type": zod.coerce.string().optional(),
   "maxRent": zod.coerce.number().optional(),
+  "minRent": zod.coerce.number().optional(),
   "bedrooms": zod.coerce.number().optional(),
+  "advanceMonths": zod.coerce.number().optional(),
+  "amenity": zod.coerce.string().optional(),
   "sort": zod.enum(['recommended', 'lowest', 'highest', 'newest', 'viewed']).optional()
 })
 
@@ -44,7 +47,7 @@ export const ListPropertiesResponseItem = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -83,7 +86,7 @@ export const GetPropertyResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -112,7 +115,7 @@ export const updatePropertyBodyRentMin = 0;
 export const UpdatePropertyBody = zod.object({
   "title": zod.string().optional(),
   "rent": zod.number().min(updatePropertyBodyRentMin).optional(),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']).optional(),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()).optional()
 })
@@ -133,7 +136,7 @@ export const UpdatePropertyResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -167,7 +170,7 @@ export const ListOwnerPropertiesResponseItem = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -227,7 +230,7 @@ export const CreatePropertyResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -266,7 +269,7 @@ export const GetTenantDashboardResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -295,7 +298,7 @@ export const GetTenantDashboardResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -324,7 +327,7 @@ export const GetTenantDashboardResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -368,7 +371,7 @@ export const GetOwnerDashboardResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -424,7 +427,7 @@ export const GetAdminDashboardResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -459,7 +462,7 @@ export const ListFavoritesResponseItem = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -498,7 +501,7 @@ export const AddFavoriteResponse = zod.object({
   "images": zod.array(zod.string()).optional(),
   "description": zod.string().optional(),
   "amenities": zod.array(zod.string()),
-  "status": zod.enum(['available', 'pending', 'rented', 'hidden']),
+  "status": zod.enum(['available', 'pending', 'rented', 'paused', 'hidden']),
   "verified": zod.boolean(),
   "owner": zod.object({
   "name": zod.string(),
@@ -583,6 +586,35 @@ export const ReportPropertyResponse = zod.object({
   "id": zod.string(),
   "propertyId": zod.string(),
   "reason": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Submit a public contact message
+ */
+export const submitContactMessageBodyNameMin = 2;
+
+export const submitContactMessageBodyEmailMin = 3;
+
+
+export const submitContactMessageBodyMessageMin = 5;
+
+
+
+export const SubmitContactMessageBody = zod.object({
+  "name": zod.string().min(submitContactMessageBodyNameMin),
+  "email": zod.string().min(submitContactMessageBodyEmailMin),
+  "topic": zod.string().min(1),
+  "message": zod.string().min(submitContactMessageBodyMessageMin)
+})
+
+export const SubmitContactMessageResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "topic": zod.string(),
+  "message": zod.string(),
   "createdAt": zod.string()
 })
 

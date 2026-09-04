@@ -16,6 +16,7 @@ export const PropertyStatus = {
   available: 'available',
   pending: 'pending',
   rented: 'rented',
+  paused: 'paused',
   hidden: 'hidden',
 } as const;
 
@@ -80,6 +81,7 @@ export const PropertyUpdateStatus = {
   available: 'available',
   pending: 'pending',
   rented: 'rented',
+  paused: 'paused',
   hidden: 'hidden',
 } as const;
 
@@ -201,11 +203,34 @@ export interface PropertyReportInput {
   reason: string;
 }
 
+export interface ContactMessageInput {
+  /** @minLength 2 */
+  name: string;
+  /** @minLength 3 */
+  email: string;
+  /** @minLength 1 */
+  topic: string;
+  /** @minLength 5 */
+  message: string;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+  createdAt: string;
+}
+
 export type ListPropertiesParams = {
 location?: string;
 type?: string;
 maxRent?: number;
+minRent?: number;
 bedrooms?: number;
+advanceMonths?: number;
+amenity?: string;
 sort?: ListPropertiesSort;
 };
 

@@ -11,6 +11,9 @@ export type ListPropertiesParams = {
 location?: string;
 type?: string;
 maxRent?: number;
+minRent?: number;
 bedrooms?: number;
+advanceMonths?: number;
+amenity?: string;
 sort?: ListPropertiesSort;
 };

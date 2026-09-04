@@ -21,6 +21,8 @@ import type {
 
 import type {
   AdminDashboard,
+  ContactMessage,
+  ContactMessageInput,
   HealthStatus,
   Lead,
   ListPropertiesParams,
@@ -1265,5 +1267,76 @@ export const useReportProperty = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReportPropertyMutationOptions(options));
+    }
+
+export const getSubmitContactMessageUrl = () => {
+
+
+
+
+  return `/api/contact`
+}
+
+/**
+ * @summary Submit a public contact message
+ */
+export const submitContactMessage = async (contactMessageInput: ContactMessageInput, options?: Parameters<typeof customFetch>[1]): Promise<ContactMessage> => {
+
+  return customFetch<ContactMessage>(getSubmitContactMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contactMessageInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitContactMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitContactMessage>>, TError,{data: BodyType<ContactMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitContactMessage>>, TError,{data: BodyType<ContactMessageInput>}, TContext> => {
+
+const mutationKey = ['submitContactMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitContactMessage>>, {data: BodyType<ContactMessageInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitContactMessage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitContactMessageMutationResult = NonNullable<Awaited<ReturnType<typeof submitContactMessage>>>
+    export type SubmitContactMessageMutationBody = BodyType<ContactMessageInput>
+    export type SubmitContactMessageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit a public contact message
+ */
+export const useSubmitContactMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitContactMessage>>, TError,{data: BodyType<ContactMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitContactMessage>>,
+        TError,
+        {data: BodyType<ContactMessageInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitContactMessageMutationOptions(options));
     }
 

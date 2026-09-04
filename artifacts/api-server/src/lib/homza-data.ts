@@ -14,7 +14,7 @@ export type HomzaProperty = {
   images?: string[];
   description?: string;
   amenities: string[];
-  status: "available" | "pending" | "rented" | "hidden";
+  status: "available" | "pending" | "rented" | "paused" | "hidden";
   verified: boolean;
   owner: { name: string; phone: string; initials: string; verified: boolean };
   views: number;
@@ -40,6 +40,15 @@ export type HomzaSavedSearch = {
   summary: string;
   matches: number;
   updatedAt: string;
+};
+
+export type HomzaContactMessage = {
+  id: string;
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+  createdAt: string;
 };
 
 const homes = [
@@ -248,6 +257,8 @@ export const savedSearches: HomzaSavedSearch[] = [
     updatedAt: "3 days ago",
   },
 ];
+
+export const contactMessages: HomzaContactMessage[] = [];
 
 export const leads: HomzaLead[] = [
   {

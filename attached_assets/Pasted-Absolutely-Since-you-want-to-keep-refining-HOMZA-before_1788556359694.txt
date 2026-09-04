@@ -1,0 +1,1859 @@
+Absolutely. Since you want to keep refining HOMZA before giving it to the AI coding agent, here is a cleaner, more implementation-focused master prompt that includes the SMS/WhatsApp/Web3Forms distinction we just discussed.
+
+You can give this directly to Replit Agent, Cursor, Claude Code, or another coding agent.
+
+
+---
+
+HOMZA — MASTER DEVELOPMENT PROMPT
+
+1. PROJECT
+
+Build a production-ready, mobile-first property rental marketplace called HOMZA.
+
+Brand: HOMZA
+Tagline: “Find your place.”
+
+HOMZA is a Uganda-focused marketplace connecting:
+
+1. Tenants / House Seekers
+
+
+2. Property Owners / Real-Estate Agents
+
+
+3. Administrators
+
+
+
+The application must be built as one application with role-based experiences, not separate applications.
+
+
+---
+
+2. TECHNOLOGY STACK
+
+Use:
+
+Next.js
+
+TypeScript
+
+React
+
+Tailwind CSS
+
+Supabase
+
+PostgreSQL database
+
+Authentication
+
+Storage
+
+Row Level Security
+
+
+Vercel-compatible architecture
+
+GitHub-compatible project structure
+
+
+Use reusable components and a scalable folder structure.
+
+Do not create unnecessary duplicated code.
+
+Separate business logic into services so external APIs can be replaced later.
+
+
+---
+
+3. BRAND & DESIGN
+
+HOMZA should feel:
+
+Modern
+
+Professional
+
+Trustworthy
+
+Friendly
+
+Clean
+
+Fast
+
+African/Ugandan without looking overly traditional
+
+
+Use a green-based visual identity with neutral backgrounds.
+
+The UI should be inspired by modern SaaS/property dashboards:
+
+Rounded cards
+
+Subtle shadows
+
+Spacious layouts
+
+Clear typography
+
+Simple icons
+
+Strong visual hierarchy
+
+Clean forms
+
+Modern property cards
+
+
+Do not copy another company's design.
+
+Create an original HOMZA design system.
+
+The application must work beautifully on:
+
+360px
+
+390px
+
+412px
+
+768px
+
+1024px
+
+1440px+
+
+
+Prioritize mobile because many Ugandan users will access HOMZA through mobile data.
+
+
+---
+
+4. USER ROLES
+
+There are three roles.
+
+TENANT
+
+Can:
+
+Browse properties without an account
+
+Search properties
+
+Filter properties
+
+View property details
+
+Save properties
+
+Save searches
+
+Contact agents
+
+Chat with agents
+
+Report suspicious properties
+
+View recently viewed properties
+
+Manage profile
+
+
+Authentication should be required only when necessary.
+
+OWNER / AGENT
+
+Must create an account before publishing properties.
+
+Can:
+
+Create listings
+
+Upload property images
+
+Edit listings
+
+Pause listings
+
+Mark properties as rented
+
+Receive leads
+
+Chat with customers
+
+View property views
+
+View analytics
+
+Manage subscription
+
+Make payments
+
+Receive availability reminders
+
+
+ADMIN
+
+Can manage the entire platform.
+
+Admin can:
+
+Verify owners
+
+Approve/reject properties
+
+Manage users
+
+Suspend users
+
+Manage reports
+
+Manage subscriptions
+
+Manage payments
+
+Manage archived properties
+
+Restore hidden properties
+
+Remove fraudulent listings
+
+Configure platform settings
+
+View analytics
+
+
+
+---
+
+5. PUBLIC HOMZA WEBSITE
+
+Create:
+
+/
+
+Hero section:
+
+Find your place.
+
+Subtitle:
+
+Discover homes, apartments and rentals across Uganda.
+
+Search bar:
+
+Location
+
+Property type
+
+Maximum rent
+
+
+Primary CTA:
+
+Find a Home
+
+Secondary CTA:
+
+List Your Property
+
+Popular locations:
+
+Kampala
+
+Kira
+
+Ntinda
+
+Kyanja
+
+Entebbe
+
+Wakiso
+
+Mukono
+
+
+
+---
+
+6. PROPERTY SEARCH
+
+Create:
+
+/properties
+
+and
+
+/search
+
+Users should be able to filter by:
+
+Location
+
+District
+
+Neighborhood
+
+Area
+
+
+Property type
+
+Single room
+
+Studio
+
+1 bedroom
+
+2 bedroom
+
+3 bedroom
+
+Apartment
+
+House
+
+Villa
+
+Office
+
+Shop
+
+Land
+
+
+Price
+
+Minimum rent
+
+Maximum rent
+
+
+Advance
+
+1 month
+
+3 months
+
+6 months
+
+
+Amenities
+
+Examples:
+
+Yaka
+
+NWSC
+
+Water tank
+
+Perimeter wall
+
+Fenced
+
+Security guard
+
+Parking
+
+Wi-Fi
+
+Balcony
+
+Furnished
+
+
+Sorting:
+
+Recommended
+
+Lowest price
+
+Highest price
+
+Newest
+
+Most viewed
+
+Most reliable agents
+
+
+
+---
+
+7. PROPERTY CARDS
+
+Every property card should display:
+
+Property image
+
+Title
+
+Location
+
+Monthly rent
+
+Advance
+
+Bedrooms
+
+Bathrooms
+
+Important amenities
+
+Availability
+
+Verification badge
+
+Favorite button
+
+
+Example:
+
+2 Bedroom Apartment
+
+Kyanja, Kampala
+
+UGX 850,000/month
+
+3 months advance
+
+Yaka • Water tank • Parking • Security
+
+View Property
+
+Images should automatically be optimized.
+
+Prefer:
+
+WebP
+
+AVIF where appropriate
+
+Responsive image sizes
+
+Lazy loading
+
+
+
+---
+
+8. PROPERTY DETAILS
+
+Create:
+
+/properties/[id]
+
+Include:
+
+Image gallery
+
+Property title
+
+Location
+
+Monthly rent
+
+Advance
+
+Deposit
+
+Bedrooms
+
+Bathrooms
+
+Property size
+
+Description
+
+Amenities
+
+Availability
+
+Owner/agent information
+
+Verification status
+
+Map
+
+Video if available
+
+
+Sticky contact buttons on mobile:
+
+Chat Agent
+
+WhatsApp Owner
+
+Call Owner
+
+Also provide:
+
+Report this listing
+
+
+---
+
+9. TENANT DASHBOARD
+
+Route:
+
+/dashboard
+
+Sidebar:
+
+HOMZA
+
+Dashboard
+
+Find a Home
+
+Saved Properties
+
+Saved Searches
+
+Messages
+
+Recently Viewed
+
+Profile
+
+Settings
+
+
+Dashboard should show:
+
+Good morning, [Name] 👋
+
+Stats:
+
+Saved Properties
+
+Saved Searches
+
+Recently Viewed
+
+Messages
+
+
+Sections:
+
+Recommended Properties
+
+Nearby Properties
+
+Recently Viewed
+
+Saved Properties
+
+
+Include a prominent property search bar.
+
+
+---
+
+10. OWNER DASHBOARD
+
+Route:
+
+/owner
+
+Sidebar:
+
+Dashboard
+
+My Properties
+
+Add Property
+
+Leads
+
+Messages
+
+Analytics
+
+Subscription
+
+Payments
+
+Profile
+
+Settings
+
+
+Dashboard statistics:
+
+Total Properties
+
+Active Listings
+
+Total Views
+
+Leads
+
+
+Include:
+
+Property performance
+
+Show views/leads over time.
+
+Subscription
+
+Display:
+
+Current plan
+
+Trial/active status
+
+Expiry date
+
+Payment status
+
+Renew button
+
+Auto-renewal setting
+
+
+Quick actions
+
+Add Property
+
+Manage Properties
+
+View Leads
+
+Make Payment
+
+
+Property list
+
+Show:
+
+Image
+
+Property name
+
+Location
+
+Price
+
+Status
+
+Views
+
+Leads
+
+Last verified date
+
+
+Actions:
+
+Edit
+
+View
+
+Pause
+
+Mark as Rented
+
+
+
+---
+
+11. PROPERTY CREATION
+
+Create:
+
+/owner/properties/new
+
+Use a multi-step form.
+
+Step 1 — Basic information
+
+Title
+
+Property type
+
+Description
+
+
+Step 2 — Location
+
+District
+
+Neighborhood
+
+Address/name
+
+Map location
+
+Latitude
+
+Longitude
+
+
+Automatically generate coordinates where possible.
+
+Step 3 — Pricing
+
+Monthly rent
+
+Advance
+
+Deposit
+
+
+Step 4 — Details
+
+Bedrooms
+
+Bathrooms
+
+Property size
+
+
+Step 5 — Amenities
+
+Allow multiple selections.
+
+Step 6 — Images
+
+Allow multiple uploads.
+
+Show:
+
+Upload progress
+
+Compression
+
+Preview
+
+Delete/reorder
+
+
+Step 7 — Preview
+
+Show exactly how the listing will appear publicly.
+
+Step 8
+
+Submit for Approval
+
+
+---
+
+12. OWNER VERIFICATION
+
+Owners/agents must be verified before they can publish publicly.
+
+Collect:
+
+Full name
+
+Phone number
+
+Email where available
+
+NIN
+
+Identification document
+
+Profile photo
+
+
+Verification states:
+
+Pending
+
+Under Review
+
+Verified
+
+Rejected
+
+
+If rejected, display the reason.
+
+SECURITY REQUIREMENT
+
+NIN information and identity documents must never be publicly accessible.
+
+They should only be accessible to:
+
+The verified owner/agent
+
+Authorized administrators
+
+
+Use Supabase Storage with appropriate security policies.
+
+
+---
+
+13. SUBSCRIPTION SYSTEM
+
+Every new owner receives:
+
+1 MONTH FREE TRIAL
+
+During the trial they can:
+
+Create properties
+
+Manage properties
+
+Receive leads
+
+
+After the trial expires, an active subscription is required for public listings.
+
+Subscription prices must be configurable from Admin.
+
+Example plans:
+
+UGX 20,000/month
+
+UGX 50,000/month
+
+
+Do not hard-code prices throughout the application.
+
+Subscription statuses:
+
+TRIAL
+
+ACTIVE
+
+EXPIRING
+
+EXPIRED
+
+CANCELLED
+
+
+When expired:
+
+Keep the owner's properties
+
+Do not delete them
+
+Hide public listings after the configured grace period
+
+Allow renewal
+
+Restore listings after successful renewal
+
+
+
+---
+
+14. PROPERTY BOOST SYSTEM
+
+Create a separate optional Boost feature.
+
+An owner can pay to increase a property's visibility.
+
+Boost can affect:
+
+Search visibility
+
+Recommended properties
+
+Homepage exposure
+
+Sponsored/boosted placement
+
+
+However:
+
+Boost must never completely override trust and relevance.
+
+Verified and reliable listings should still be prioritized.
+
+Make boost pricing configurable by Admin.
+
+
+---
+
+15. MOBILE MONEY
+
+Prepare the system for:
+
+MTN Mobile Money
+
+Airtel Money
+
+
+Create a payment abstraction layer.
+
+During development use:
+
+MockPaymentProvider
+
+Later it can be replaced by a real payment provider.
+
+Payment statuses:
+
+PENDING
+
+SUCCESSFUL
+
+FAILED
+
+CANCELLED
+
+
+Store:
+
+User
+
+Amount
+
+Provider
+
+Transaction ID
+
+Status
+
+Date
+
+
+Payments must be verified server-side when real APIs are connected.
+
+Never trust payment status supplied directly by the browser.
+
+
+---
+
+16. PROPERTY AVAILABILITY VERIFICATION
+
+HOMZA must prevent outdated listings.
+
+Every active property should periodically require verification.
+
+Default interval:
+
+14 days
+
+Example notification:
+
+> HOMZA: Is Property #104 still available?
+
+
+
+Buttons:
+
+Still Available
+
+Taken/Rented
+
+If owner confirms:
+
+Update last_verified_at
+
+Calculate next verification date
+
+Keep listing ACTIVE
+
+
+If owner says rented:
+
+Mark property RENTED
+
+Archive it
+
+
+If there is no response:
+
+After 48 hours:
+
+> Your listing has not been verified. It will be hidden soon.
+
+
+
+After the configured grace period:
+
+HIDE LISTING
+
+Do not delete the property.
+
+Admins can restore hidden listings.
+
+Design this system around scheduled jobs/cron so it works reliably in production.
+
+
+---
+
+17. SMS NOTIFICATIONS
+
+Create a notification abstraction.
+
+Example interface:
+
+NotificationService
+
+Methods:
+
+sendSMS()
+
+sendWhatsApp()
+
+sendAvailabilityReminder()
+
+sendPaymentNotification()
+
+sendVerificationNotification()
+
+
+During development use mock services.
+
+Later support an SMS provider such as Africa's Talking or another suitable provider.
+
+SMS can be used for:
+
+OTP
+
+Availability reminders
+
+Payment notifications
+
+Verification notifications
+
+Subscription expiry warnings
+
+Important alerts
+
+
+Do not tightly couple HOMZA's business logic to Africa's Talking.
+
+
+---
+
+18. WHATSAPP
+
+Prepare integration for:
+
+WhatsApp Business / Cloud API or suitable provider.
+
+Use WhatsApp for:
+
+OTP where supported
+
+Availability reminders
+
+Payment notifications
+
+Verification notifications
+
+Subscription reminders
+
+Customer/agent communication where appropriate
+
+
+Use templates where required by WhatsApp's policies.
+
+Keep WhatsApp integration behind the notification service abstraction.
+
+
+---
+
+19. WEB3FORMS
+
+Use Web3Forms only for simple website forms where appropriate.
+
+Examples:
+
+Contact Us
+
+Name
+
+Email
+
+Phone
+
+Subject
+
+Message
+
+
+General feedback
+
+Partnership inquiries
+
+Simple support/contact submissions
+
+Important distinction
+
+Do NOT use Web3Forms as the main application backend.
+
+Do NOT use it for:
+
+Property database
+
+Authentication
+
+Messaging system
+
+Payments
+
+Owner verification
+
+Subscription management
+
+Availability logic
+
+
+Those belong in Supabase/backend services.
+
+For sensitive or authenticated reports, prefer the HOMZA backend/database so reports can be tracked and managed from Admin.
+
+
+---
+
+20. IN-APP MESSAGING
+
+Create customer ↔ owner/agent messaging.
+
+Requirements:
+
+Conversation list
+
+Conversation page
+
+Send messages
+
+Message timestamps
+
+Read/unread status
+
+Property reference
+
+Basic abuse/report mechanism
+
+
+Users must be authenticated before using in-app messaging.
+
+Do not expose private phone numbers unnecessarily.
+
+
+---
+
+21. ADMIN PANEL
+
+Route:
+
+/admin
+
+Sidebar:
+
+Overview
+
+Users
+
+Owners
+
+Verification
+
+Properties
+
+Reports
+
+Subscriptions
+
+Payments
+
+Archived Listings
+
+Analytics
+
+Settings
+
+
+Dashboard statistics:
+
+Total Users
+
+Tenants
+
+Owners
+
+Active Properties
+
+Pending Verification
+
+Monthly Revenue
+
+Reported Listings
+
+
+
+---
+
+22. ADMIN VERIFICATION
+
+Create a verification queue.
+
+Display:
+
+Owner name
+
+Phone
+
+NIN
+
+Verification status
+
+Submitted date
+
+Identification document
+
+Profile photo
+
+
+Actions:
+
+Approve
+
+Reject
+
+Request correction
+
+
+Admin must be able to provide rejection reasons.
+
+
+---
+
+23. ADMIN PROPERTY MODERATION
+
+Property states:
+
+Draft
+
+Pending
+
+Approved
+
+Rejected
+
+Active
+
+Paused
+
+Rented
+
+Hidden
+
+Reported
+
+Archived
+
+
+Admin can:
+
+Approve
+
+Reject
+
+Hide
+
+Restore
+
+Archive
+
+Remove fraudulent listings
+
+
+
+---
+
+24. REPORTING SYSTEM
+
+Users should be able to report suspicious listings.
+
+Reasons could include:
+
+Fake property
+
+Wrong price
+
+Property unavailable
+
+Scam
+
+Misleading information
+
+Duplicate listing
+
+Inappropriate content
+
+
+Store reports in the database.
+
+Admins should have:
+
+Report queue
+
+Report status
+
+Investigation notes
+
+Resolution
+
+Ability to suspend/remove listings
+
+
+
+---
+
+25. DATABASE
+
+Use Supabase PostgreSQL.
+
+Core tables:
+
+profiles
+
+owner_verifications
+
+properties
+
+property_images
+
+amenities
+
+property_amenities
+
+favorites
+
+saved_searches
+
+messages
+
+conversations
+
+subscriptions
+
+payments
+
+availability_checks
+
+reports
+
+notifications
+
+property_views
+
+
+Use proper:
+
+Foreign keys
+
+Constraints
+
+Indexes
+
+Timestamps
+
+Status fields
+
+
+Important indexes:
+
+district
+
+neighborhood
+
+rent_price
+
+property_type
+
+status
+
+owner_id
+
+created_at
+
+
+
+---
+
+26. ROW LEVEL SECURITY
+
+Implement Supabase RLS correctly.
+
+Tenants should only be able to access their own:
+
+Profile
+
+Favorites
+
+Saved searches
+
+Private conversations/messages
+
+
+Owners should only manage their own:
+
+Properties
+
+Property images
+
+Leads
+
+Subscription
+
+Payments
+
+
+Admins can access platform-wide administrative information.
+
+Identity documents require particularly strict access policies.
+
+Never rely only on frontend route protection.
+
+
+---
+
+27. SECURITY
+
+Implement:
+
+Role-based access control
+
+Supabase RLS
+
+Server-side authorization
+
+Input validation
+
+Secure file uploads
+
+File type validation
+
+File size limits
+
+Protected admin routes
+
+Rate-limiting architecture
+
+Secure payment verification
+
+Secure webhook handling
+
+Protection against unauthorized property modification
+
+
+Never expose:
+
+NIN documents
+
+Private ID images
+
+Private user information
+
+Secret API keys
+
+Service-role keys
+
+
+in the frontend.
+
+
+---
+
+28. PERFORMANCE
+
+HOMZA must work well on slower connections.
+
+Prioritize:
+
+Fast initial loading
+
+Lazy loading
+
+Image compression
+
+WebP/AVIF
+
+Responsive images
+
+Pagination/infinite scrolling
+
+Efficient database queries
+
+Caching where appropriate
+
+Skeleton loaders
+
+Minimal unnecessary JavaScript
+
+
+Avoid:
+
+Huge images
+
+Heavy animations
+
+Unnecessary dependencies
+
+Excessive client-side rendering
+
+
+
+---
+
+29. PAGES
+
+Public
+
+/
+
+/properties
+
+/properties/[id]
+
+/search
+
+/about
+
+/contact
+
+/login
+
+/register
+
+Customer
+
+/dashboard
+
+/dashboard/saved
+
+/dashboard/searches
+
+/dashboard/messages
+
+/dashboard/profile
+
+Owner
+
+/owner
+
+/owner/properties
+
+/owner/properties/new
+
+/owner/properties/[id]
+
+/owner/properties/[id]/edit
+
+/owner/leads
+
+/owner/messages
+
+/owner/analytics
+
+/owner/payments
+
+/owner/subscription
+
+/owner/profile
+
+Admin
+
+/admin
+
+/admin/users
+
+/admin/owners
+
+/admin/verification
+
+/admin/properties
+
+/admin/reports
+
+/admin/payments
+
+/admin/subscriptions
+
+/admin/archived
+
+/admin/settings
+
+
+---
+
+30. AUTHENTICATION
+
+Customer authentication:
+
+Phone OTP
+
+WhatsApp OTP where supported
+
+
+Browsing must not require authentication.
+
+Owner registration must require:
+
+Phone
+
+Name
+
+NIN
+
+Identification document
+
+Profile information
+
+
+Use Supabase Auth.
+
+Implement role-based redirects:
+
+Tenant → /dashboard
+
+Owner → /owner
+
+Admin → /admin
+
+
+---
+
+31. DEMO DATA
+
+Include realistic demo properties:
+
+Property 1
+
+2 Bedroom Apartment
+Kyanja, Kampala
+UGX 850,000/month
+
+Property 2
+
+1 Bedroom Apartment
+Ntinda, Kampala
+UGX 650,000/month
+
+Property 3
+
+2 Bedroom House
+Kira, Wakiso
+UGX 900,000/month
+
+Property 4
+
+Single Room
+Kawempe
+UGX 250,000/month
+
+
+---
+
+32. UX STATES
+
+Every major feature must have:
+
+Loading state
+
+Skeleton state
+
+Empty state
+
+Error state
+
+Success notification
+
+Confirmation dialog
+
+Form validation
+
+Appropriate mobile feedback
+
+
+Examples:
+
+No saved properties:
+
+> You haven't saved any properties yet.
+
+
+
+No messages:
+
+> Your conversations will appear here.
+
+
+
+No listings:
+
+> You haven't added any properties yet.
+
+
+
+
+---
+
+33. ARCHITECTURE
+
+Use one application.
+
+Do NOT create separate tenant and owner applications.
+
+Use shared:
+
+Components
+
+Database
+
+Authentication
+
+Services
+
+Design system
+
+Utilities
+
+
+Role-based routing:
+
+Tenant → /dashboard
+Owner → /owner
+Admin → /admin
+
+Use reusable components such as:
+
+PropertyCard
+
+PropertyGallery
+
+SearchBar
+
+FilterPanel
+
+DashboardCard
+
+StatusBadge
+
+ImageUploader
+
+ChatWindow
+
+PaymentCard
+
+VerificationCard
+
+SubscriptionCard
+
+
+
+---
+
+34. EXTERNAL SERVICES ARCHITECTURE
+
+Create abstractions/interfaces for:
+
+PaymentService
+NotificationService
+SMSProvider
+WhatsAppProvider
+StorageService
+
+Development implementations:
+
+MockPaymentProvider
+MockSMSProvider
+MockWhatsAppProvider
+
+Production implementations can later connect to:
+
+MTN/Airtel payment provider
+Africa's Talking or another SMS provider
+WhatsApp Business/Cloud API
+
+This allows development without waiting for API credentials.
+
+
+---
+
+35. DEVELOPMENT PHASES
+
+Phase 1
+
+UI/UX and responsive frontend.
+
+Phase 2
+
+Supabase database and authentication.
+
+Phase 3
+
+Property management and search.
+
+Phase 4
+
+Owner subscriptions and payments.
+
+Phase 5
+
+SMS/WhatsApp notifications and availability automation.
+
+Phase 6
+
+Admin tools, security, testing and production deployment.
+
+
+---
+
+36. IMPORTANT DEVELOPMENT RULES
+
+Do not build only a visual prototype.
+
+Build a functional full-stack application architecture.
+
+However, external services that require credentials should initially use mock implementations.
+
+Do not hard-code business rules that should be configurable.
+
+Do not hard-code subscription prices.
+
+Do not hard-code districts or neighborhoods in a way that makes future expansion difficult.
+
+Make the architecture scalable for additional Ugandan districts and eventually other countries.
+
+Prioritize:
+
+Security → Reliability → Performance → UX → Scalability
+
+
+---
+
+37. FINAL PRODUCT GOAL
+
+At the end of development:
+
+A tenant should be able to:
+
+Browse HOMZA → Search → Filter → View property → Create account → Save property → Contact agent → Chat → Report listing.
+
+An owner should be able to:
+
+Register → Submit verification → Get verified → Create property → Upload photos → Submit listing → Get approved → Receive leads → Manage property → Subscribe → Receive availability reminders.
+
+An admin should be able to:
+
+Login → Verify owners → Moderate listings → Manage users → Handle reports → Manage subscriptions → Monitor payments → Restore/archive listings → View analytics.
+
+The final application should feel like a real Ugandan property marketplace, not a school/demo project.
+
+Brand everything as HOMZA.
+
+Tagline: “Find your place.”

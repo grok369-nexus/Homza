@@ -51,9 +51,18 @@ paths:
         - name: maxRent
           in: query
           schema: { type: number }
+        - name: minRent
+          in: query
+          schema: { type: number }
         - name: bedrooms
           in: query
           schema: { type: number }
+        - name: advanceMonths
+          in: query
+          schema: { type: number }
+        - name: amenity
+          in: query
+          schema: { type: string }
         - name: sort
           in: query
           schema:
@@ -258,6 +267,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PropertyReport" }
+  /contact:
+    post:
+      operationId: submitContactMessage
+      tags: [health]
+      summary: Submit a public contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactMessageInput" }
+      responses:
+        "201":
+          description: Contact message received
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContactMessage" }
 components:
   parameters:
     PropertyId:
@@ -298,7 +323,7 @@ components:
           items: { type: string }
         status:
           type: string
-          enum: [available, pending, rented, hidden]
+          enum: [available, pending, rented, paused, hidden]
         verified: { type: boolean }
         owner: { $ref: "#/components/schemas/OwnerSummary" }
         views: { type: number }
@@ -330,7 +355,7 @@ components:
         rent: { type: number, minimum: 0 }
         status:
           type: string
-          enum: [available, pending, rented, hidden]
+          enum: [available, pending, rented, paused, hidden]
         description: { type: string }
         amenities:
           type: array
@@ -451,6 +476,24 @@ components:
       properties:
         propertyId: { type: string }
         reason: { type: string }
+    ContactMessageInput:
+      type: object
+      required: [name, email, topic, message]
+      properties:
+        name: { type: string, minLength: 2 }
+        email: { type: string, minLength: 3 }
+        topic: { type: string, minLength: 1 }
+        message: { type: string, minLength: 5 }
+    ContactMessage:
+      type: object
+      required: [id, name, email, topic, message, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        topic: { type: string }
+        message: { type: string }
+        createdAt: { type: string }
     VerificationItem:
       type: object
       required: [id, owner, phone, submittedAt, status]

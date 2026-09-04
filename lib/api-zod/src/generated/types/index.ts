@@ -8,6 +8,8 @@
 
 export * from './activity';
 export * from './adminDashboard';
+export * from './contactMessage';
+export * from './contactMessageInput';
 export * from './healthStatus';
 export * from './lead';
 export * from './leadStatus';

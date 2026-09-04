@@ -8,3 +8,5 @@ The installed generated validation runtime is Zod 3-compatible, while Orval can 
 **Why:** Code generation succeeded but the workspace typecheck failed when integer fields produced `z.int()`, which is unavailable in the installed Zod runtime.
 
 **How to apply:** After changing OpenAPI numeric fields, run codegen and the library typecheck together before wiring the generated schemas into server routes.
+
+**Additional compatibility:** OpenAPI email formats can also make Orval emit Zod 4-only `z.email()`. Keep generated email fields as plain strings with length validation until the workspace runtime is upgraded.

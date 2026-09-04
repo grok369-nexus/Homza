@@ -35,11 +35,14 @@ HOMZA is a Uganda-focused rental marketplace for discovering homes, managing lis
 - The first build uses a replaceable in-memory demo service so browsing and CRUD-like flows work before a persistent storage provider is configured.
 - OpenAPI-generated React Query hooks are the client boundary; backend response validation stays close to the route handlers.
 - Contact actions expose direct WhatsApp and phone links while keeping the trust reminder visible before a tenant pays.
+- Public contact submissions and discovery filters use the same API contract as the marketplace flows.
+- Owner listings support an explicit `paused` state that is excluded from public discovery without deleting the listing.
 
 ## Product
 
 - Public home discovery with Kampala/Wakiso/Entebbe demo inventory
 - Search and sorting by location, home type, rent, and bedroom count
+- Advanced filtering by rent range, bedroom count, advance requirement, and amenity
 - Property details with gallery, amenities, verification context, report flow, shortlist saving, WhatsApp, and phone contact
 - Tenant dashboard with saved homes, saved searches, messages, and profile surfaces
 - Owner dashboard with listing performance, multi-step listing creation/editing, status controls, leads, analytics, payments, and subscription surfaces

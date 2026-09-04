@@ -6,6 +6,7 @@ import {
   GetPropertyParams,
   ListPropertiesQueryParams,
   ReportPropertyBody,
+  SubmitContactMessageBody,
   UpdatePropertyBody,
 } from "@workspace/api-zod";
 import {
@@ -14,6 +15,7 @@ import {
   leads,
   properties,
   savedSearches,
+  contactMessages,
   visibleProperties,
   type HomzaProperty,
 } from "../lib/homza-data";
@@ -32,7 +34,7 @@ const propertySort = (items: HomzaProperty[], sort?: string) => {
 router.get("/properties", (req, res) => {
   const parsed = ListPropertiesQueryParams.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "Invalid property filters" });
-  const { location, type, maxRent, bedrooms, sort } = parsed.data;
+  const { location, type, minRent, maxRent, bedrooms, advanceMonths, amenity, sort } = parsed.data;
   let result = visibleProperties();
   if (location) {
     const needle = location.toLowerCase();
@@ -42,7 +44,13 @@ router.get("/properties", (req, res) => {
   }
   if (type && type !== "All types") result = result.filter((property) => property.type.toLowerCase() === type.toLowerCase());
   if (maxRent) result = result.filter((property) => property.rent <= maxRent);
+  if (minRent) result = result.filter((property) => property.rent >= minRent);
   if (bedrooms) result = result.filter((property) => property.bedrooms >= bedrooms);
+  if (advanceMonths) result = result.filter((property) => property.advanceMonths <= advanceMonths);
+  if (amenity) {
+    const needle = amenity.toLowerCase();
+    result = result.filter((property) => property.amenities.some((item) => item.toLowerCase().includes(needle)));
+  }
   return res.json(propertySort(result, sort));
 });
 
@@ -142,6 +150,18 @@ router.post("/reports", (req, res) => {
     reason: body.data.reason,
     createdAt: new Date().toISOString(),
   });
+});
+
+router.post("/contact", (req, res) => {
+  const body = SubmitContactMessageBody.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: "Please complete the contact form" });
+  const message = {
+    id: `contact-${Date.now()}`,
+    ...body.data,
+    createdAt: new Date().toISOString(),
+  };
+  contactMessages.unshift(message);
+  return res.status(201).json(message);
 });
 
 export default router;
