@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "HOMZA Property Marketplace"
+description = "A mobile-first Uganda-focused property rental marketplace where tenants discover homes, owners manage listings, and admins oversee verification and trust."
+version = "1.0.0"
+id = "artifacts/homza"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22376
+
+[services.development]
+run = "pnpm --filter @workspace/homza run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/homza", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/homza/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22376"
+BASE_PATH = "/"

@@ -1,6 +1,6 @@
-# [Project name]
+# HOMZA Property Marketplace
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+HOMZA is a Uganda-focused rental marketplace for discovering homes, managing listings, and keeping property information trustworthy.
 
 ## Run & Operate
 
@@ -19,18 +19,31 @@ _Replace the heading above with the project's name, and this line with one sente
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
+- Frontend: React + Vite + TypeScript + Tailwind CSS
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/homza/src/App.tsx` — shared public, tenant, owner, and admin route experience
+- `artifacts/homza/src/index.css` — HOMZA visual tokens and responsive utility styles
+- `lib/api-spec/openapi.yaml` — source of truth for the property marketplace API
+- `artifacts/api-server/src/lib/homza-data.ts` — isolated development demo service and Ugandan property fixtures
+- `artifacts/api-server/src/routes/homza.ts` and `dashboards.ts` — marketplace API routes
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- One web artifact owns the public marketplace and all role-specific workspaces; role-specific routes share the same visual system and API.
+- The first build uses a replaceable in-memory demo service so browsing and CRUD-like flows work before a persistent storage provider is configured.
+- OpenAPI-generated React Query hooks are the client boundary; backend response validation stays close to the route handlers.
+- Contact actions expose direct WhatsApp and phone links while keeping the trust reminder visible before a tenant pays.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Public home discovery with Kampala/Wakiso/Entebbe demo inventory
+- Search and sorting by location, home type, rent, and bedroom count
+- Property details with gallery, amenities, verification context, report flow, shortlist saving, WhatsApp, and phone contact
+- Tenant dashboard with saved homes, saved searches, messages, and profile surfaces
+- Owner dashboard with listing performance, multi-step listing creation/editing, status controls, leads, analytics, payments, and subscription surfaces
+- Admin trust console with verification, moderation, reports, payments, subscriptions, archive, and settings routes
 
 ## User preferences
 
@@ -38,7 +51,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The web artifact's build script expects `PORT` and `BASE_PATH` from the managed workflow; use the workflow for normal previews.
+- The development API data is process-local until the persistent storage phase is implemented.
 
 ## Pointers
 

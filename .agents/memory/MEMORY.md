@@ -1,0 +1,1 @@
+- [Orval and Zod compatibility](orval-zod-compatibility.md) — OpenAPI integer schemas can emit Zod 4-only helpers in this Zod 3 workspace.

@@ -10,6 +10,18 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: properties
+    description: Public property discovery and listing management
+  - name: dashboard
+    description: Role-specific dashboard summaries
+  - name: favorites
+    description: Tenant saved properties
+  - name: searches
+    description: Tenant saved searches
+  - name: leads
+    description: Owner lead management
+  - name: admin
+    description: Platform moderation and analytics
 paths:
   /healthz:
     get:
@@ -24,7 +36,235 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List available properties
+      parameters:
+        - name: location
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: maxRent
+          in: query
+          schema: { type: number }
+        - name: bedrooms
+          in: query
+          schema: { type: number }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recommended, lowest, highest, newest, viewed]
+      responses:
+        "200":
+          description: Property results
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Property" }
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get a property detail
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      responses:
+        "200":
+          description: Property detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+        "404":
+          description: Property not found
+    patch:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update an owned property
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PropertyUpdate" }
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+  /owner/properties:
+    get:
+      operationId: listOwnerProperties
+      tags: [properties]
+      summary: List properties owned by the current owner
+      responses:
+        "200":
+          description: Owner properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Property" }
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a property listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PropertyInput" }
+      responses:
+        "201":
+          description: Created property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+  /dashboard/tenant:
+    get:
+      operationId: getTenantDashboard
+      tags: [dashboard]
+      summary: Get tenant dashboard summary
+      responses:
+        "200":
+          description: Tenant dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantDashboard" }
+  /dashboard/owner:
+    get:
+      operationId: getOwnerDashboard
+      tags: [dashboard]
+      summary: Get owner dashboard summary
+      responses:
+        "200":
+          description: Owner dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerDashboard" }
+  /dashboard/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [dashboard, admin]
+      summary: Get admin dashboard summary
+      responses:
+        "200":
+          description: Admin dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminDashboard" }
+  /favorites:
+    get:
+      operationId: listFavorites
+      tags: [favorites]
+      summary: List saved properties
+      responses:
+        "200":
+          description: Saved properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Property" }
+  /favorites/{propertyId}:
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Save a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Saved property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove a saved property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Removed
+  /searches:
+    get:
+      operationId: listSavedSearches
+      tags: [searches]
+      summary: List saved searches
+      responses:
+        "200":
+          description: Saved searches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SavedSearch" }
+    post:
+      operationId: createSavedSearch
+      tags: [searches]
+      summary: Create a saved search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SavedSearchInput" }
+      responses:
+        "201":
+          description: Saved search
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedSearch" }
+  /owner/leads:
+    get:
+      operationId: listOwnerLeads
+      tags: [leads]
+      summary: List leads for the current owner
+      responses:
+        "200":
+          description: Owner leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Lead" }
+  /reports:
+    post:
+      operationId: reportProperty
+      tags: [properties]
+      summary: Report a suspicious property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PropertyReportInput" }
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PropertyReport" }
 components:
+  parameters:
+    PropertyId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +273,193 @@ components:
           type: string
       required:
         - status
+    Property:
+      type: object
+      required: [id, title, type, location, district, neighborhood, rent, advanceMonths, bedrooms, bathrooms, image, amenities, status, verified, owner, views, leads, createdAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        type: { type: string }
+        location: { type: string }
+        district: { type: string }
+        neighborhood: { type: string }
+        rent: { type: number }
+        advanceMonths: { type: number }
+        bedrooms: { type: number }
+        bathrooms: { type: number }
+        size: { type: ["number", "null"] }
+        image: { type: string }
+        images:
+          type: array
+          items: { type: string }
+        description: { type: string }
+        amenities:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [available, pending, rented, hidden]
+        verified: { type: boolean }
+        owner: { $ref: "#/components/schemas/OwnerSummary" }
+        views: { type: number }
+        leads: { type: number }
+        createdAt: { type: string }
+        lastVerifiedAt: { type: ["string", "null"] }
+    PropertyInput:
+      type: object
+      required: [title, type, district, neighborhood, rent, advanceMonths, bedrooms, bathrooms, description, amenities]
+      properties:
+        title: { type: string, minLength: 1 }
+        type: { type: string }
+        district: { type: string }
+        neighborhood: { type: string }
+        address: { type: string }
+        rent: { type: number, minimum: 0 }
+        advanceMonths: { type: number, minimum: 1 }
+        bedrooms: { type: number, minimum: 0 }
+        bathrooms: { type: number, minimum: 0 }
+        description: { type: string }
+        amenities:
+          type: array
+          items: { type: string }
+        image: { type: string }
+    PropertyUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        rent: { type: number, minimum: 0 }
+        status:
+          type: string
+          enum: [available, pending, rented, hidden]
+        description: { type: string }
+        amenities:
+          type: array
+          items: { type: string }
+    OwnerSummary:
+      type: object
+      required: [name, phone, initials, verified]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        initials: { type: string }
+        verified: { type: boolean }
+    TenantDashboard:
+      type: object
+      required: [savedProperties, savedSearches, recentViews, messages, recommended, nearby, recentlyViewed]
+      properties:
+        savedProperties: { type: number }
+        savedSearches: { type: number }
+        recentViews: { type: number }
+        messages: { type: number }
+        recommended:
+          type: array
+          items: { $ref: "#/components/schemas/Property" }
+        nearby:
+          type: array
+          items: { $ref: "#/components/schemas/Property" }
+        recentlyViewed:
+          type: array
+          items: { $ref: "#/components/schemas/Property" }
+    OwnerDashboard:
+      type: object
+      required: [totalProperties, activeListings, totalViews, leads, weeklyViews, properties, activity]
+      properties:
+        totalProperties: { type: number }
+        activeListings: { type: number }
+        totalViews: { type: number }
+        leads: { type: number }
+        weeklyViews:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: number }
+        properties:
+          type: array
+          items: { $ref: "#/components/schemas/Property" }
+        activity:
+          type: array
+          items: { $ref: "#/components/schemas/Activity" }
+    AdminDashboard:
+      type: object
+      required: [totalUsers, tenants, owners, activeProperties, pendingVerification, monthlyRevenue, reportedListings, verificationQueue, moderationQueue]
+      properties:
+        totalUsers: { type: number }
+        tenants: { type: number }
+        owners: { type: number }
+        activeProperties: { type: number }
+        pendingVerification: { type: number }
+        monthlyRevenue: { type: number }
+        reportedListings: { type: number }
+        verificationQueue:
+          type: array
+          items: { $ref: "#/components/schemas/VerificationItem" }
+        moderationQueue:
+          type: array
+          items: { $ref: "#/components/schemas/Property" }
+    Activity:
+      type: object
+      required: [id, text, time, kind]
+      properties:
+        id: { type: string }
+        text: { type: string }
+        time: { type: string }
+        kind: { type: string }
+    SavedSearch:
+      type: object
+      required: [id, name, location, summary, matches, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        location: { type: string }
+        summary: { type: string }
+        matches: { type: number }
+        updatedAt: { type: string }
+    SavedSearchInput:
+      type: object
+      required: [name, location, summary]
+      properties:
+        name: { type: string }
+        location: { type: string }
+        summary: { type: string }
+    Lead:
+      type: object
+      required: [id, name, property, message, source, status, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        property: { type: string }
+        message: { type: string }
+        source: { type: string }
+        status:
+          type: string
+          enum: [new, contacted, viewing, closed]
+        createdAt: { type: string }
+    PropertyReport:
+      type: object
+      required: [id, propertyId, reason, createdAt]
+      properties:
+        id: { type: string }
+        propertyId: { type: string }
+        reason: { type: string }
+        createdAt: { type: string }
+    PropertyReportInput:
+      type: object
+      required: [propertyId, reason]
+      properties:
+        propertyId: { type: string }
+        reason: { type: string }
+    VerificationItem:
+      type: object
+      required: [id, owner, phone, submittedAt, status]
+      properties:
+        id: { type: string }
+        owner: { type: string }
+        phone: { type: string }
+        submittedAt: { type: string }
+        status:
+          type: string
+          enum: [pending, under_review, verified, rejected]
 
