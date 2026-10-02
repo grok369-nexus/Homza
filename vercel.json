@@ -4,7 +4,11 @@
   "outputDirectory": "artifacts/homza/dist/public",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]
