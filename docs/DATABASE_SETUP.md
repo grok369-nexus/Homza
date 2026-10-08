@@ -31,7 +31,7 @@ WHERE email = lower('you@example.com');
 
 3. Confirm exactly one row was updated. Sign out and sign in again.
 
-Public registration intentionally cannot create an admin account. Owner accounts start with verification status `pending`; registration does not verify a person or a property.
+Public registration intentionally cannot create an admin account. Owner accounts start with verification status `pending`; registration does not verify a person or a property. The owner document-upload/review workflow is not implemented yet, so only promote an owner after independently checking their identity and phone outside Homza. The admin action is a manual status change, not automated identity verification.
 
 ## Current access rules
 
