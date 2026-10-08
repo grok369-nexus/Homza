@@ -442,7 +442,48 @@ function Auth({ register = false }: { register?: boolean }) {
 }
 
 function AppRouter() {
+  const [location, navigate] = useLocation();
+  const protectedRole = location.startsWith('/admin') ? 'admin' : location.startsWith('/owner') ? 'owner' : location.startsWith('/dashboard') ? 'tenant' : null;
+  const [checkingAccess, setCheckingAccess] = useState(() => Boolean(
+    window.location.pathname.startsWith('/admin') ||
+    window.location.pathname.startsWith('/owner') ||
+    window.location.pathname.startsWith('/dashboard')
+  ));
+
   useHealthCheck({ query: { queryKey: ['/api/healthz'], staleTime: 60_000 } });
+
+  useEffect(() => {
+    if (!protectedRole) {
+      setCheckingAccess(false);
+      return;
+    }
+    let active = true;
+    setCheckingAccess(true);
+    fetch('/api/auth/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Please sign in to continue.');
+        return response.json();
+      })
+      .then((result) => {
+        if (!active) return;
+        const role = result?.user?.role;
+        if (role !== protectedRole) {
+          navigate(role === 'admin' ? '/admin' : role === 'owner' ? '/owner' : role === 'tenant' ? '/dashboard' : '/login');
+          setCheckingAccess(false);
+          return;
+        }
+        setCheckingAccess(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCheckingAccess(false);
+        navigate('/login');
+      });
+    return () => { active = false; };
+  }, [location, protectedRole, navigate]);
+
+  if (checkingAccess) return <main className="grid min-h-[100dvh] place-items-center bg-background px-5"><div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold"><LoaderCircle className="animate-spin text-primary" size={18} /> Checking your Homza session…</div></main>;
+
   return <ErrorBoundary resetKey={window.location.pathname}><Switch>
     <Route path="/" component={Home} /><Route path="/properties" component={PropertiesPage} /><Route path="/properties/:id" component={PropertyDetail} /><Route path="/search" component={SearchPage} /><Route path="/about" component={About} /><Route path="/contact" component={Contact} /><Route path="/login"><Auth /></Route><Route path="/register"><Auth register /></Route>
     <Route path="/dashboard/saved" component={SavedPage} /><Route path="/dashboard/searches" component={SearchesPage} /><Route path="/dashboard/messages"><InteractiveMessagesPage /></Route><Route path="/dashboard/profile"><OwnerSimplePage page="profile" role="tenant" /></Route><Route path="/dashboard" component={Dashboard} />
