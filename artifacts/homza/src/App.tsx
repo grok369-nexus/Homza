@@ -198,7 +198,7 @@ function SearchPage() {
 function PropertyDetail() {
   const { id = '' } = useParams<{ id: string }>();
   const { data, isLoading, isError, refetch } = useGetProperty(id, { query: { enabled: !!id, queryKey: getGetPropertyQueryKey(id) } });
-  const property = data || sampleProperties.find((item) => item.id === id) || sampleProperties[0];
+  const property = data;
   const [saved, setSaved] = useState(false);
   const [contacted, setContacted] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -207,6 +207,7 @@ function PropertyDetail() {
   const report = useReportProperty();
   const submitReport = () => { report.mutate({ data: { propertyId: id, reason: 'Listing details need checking' } }, { onSuccess: () => setReportOpen(false) }); };
   const toggleSaved = () => {
+    if (!property) return;
     const mutation = saved ? favoriteRemove : favoriteAdd;
     mutation.mutate({ propertyId: property.id }, {
       onSuccess: () => {
