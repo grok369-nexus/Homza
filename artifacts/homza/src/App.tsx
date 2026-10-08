@@ -209,6 +209,7 @@ function PropertyDetail() {
       },
     });
   };
+  if (isLoading && !property) return <><PublicHeader /><main className='mx-auto max-w-7xl px-5 py-12'><div className='skeleton h-96 rounded-3xl' /></main></>;
   if (!property) return <><PublicHeader /><main className='mx-auto max-w-7xl px-5 py-12 text-sm text-muted-foreground'>This listing is unavailable or has been removed.</main><Footer /></>;
   const phone = property.owner.phone.replace(/[^\d+]/g, '').replace(/^\+/, '');
   const whatsappHref = `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${property.owner.name}, I am interested in ${property.title} on Homza.`)}`;
