@@ -2,6 +2,7 @@ import {
   boolean,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -9,16 +10,19 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+export const homzaRole = pgEnum("homza_role", ["tenant", "owner", "admin"]);
+export const ownerVerificationStatus = pgEnum("homza_owner_verification_status", ["unverified", "pending", "verified", "rejected"]);
+export const propertyStatus = pgEnum("homza_property_status", ["available", "pending", "rented", "paused", "hidden"]);
+export const reportStatus = pgEnum("homza_report_status", ["open", "reviewing", "resolved", "dismissed"]);
+
 export const users = pgTable("homza_users", {
   id: uuid("id").defaultRandom().primaryKey(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role", { enum: ["tenant", "owner", "admin"] }).notNull().default("tenant"),
+  role: homzaRole("role").notNull().default("tenant"),
   phone: text("phone"),
-  ownerVerificationStatus: text("owner_verification_status", {
-    enum: ["unverified", "pending", "verified", "rejected"],
-  }).notNull().default("unverified"),
+  ownerVerificationStatus: ownerVerificationStatus("owner_verification_status").notNull().default("unverified"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -47,7 +51,7 @@ export const properties = pgTable("homza_properties", {
   images: jsonb("images").$type<string[]>().notNull().default([]),
   description: text("description").notNull().default(""),
   amenities: jsonb("amenities").$type<string[]>().notNull().default([]),
-  status: text("status", { enum: ["available", "pending", "rented", "paused", "hidden"] }).notNull().default("pending"),
+  status: propertyStatus("status").notNull().default("pending"),
   verified: boolean("verified").notNull().default(false),
   views: integer("views").notNull().default(0),
   leads: integer("leads").notNull().default(0),
@@ -75,7 +79,7 @@ export const reports = pgTable("homza_reports", {
   propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
   reporterId: uuid("reporter_id").references(() => users.id, { onDelete: "set null" }),
   reason: text("reason").notNull(),
-  status: text("status", { enum: ["open", "reviewing", "resolved", "dismissed"] }).notNull().default("open"),
+  status: reportStatus("status").notNull().default("open"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
