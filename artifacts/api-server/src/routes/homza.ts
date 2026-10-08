@@ -272,6 +272,11 @@ router.patch("/admin/properties/:id/review", requireAuth, requireRole("admin"), 
     if (decision !== "approve" && decision !== "reject") {
       return res.status(400).json({ error: "Choose approve or reject" });
     }
+    const existing = await propertyWithOwner(id);
+    if (!existing) return res.status(404).json({ error: "Property not found" });
+    if (decision === "approve" && existing.owner.ownerVerificationStatus !== "verified") {
+      return res.status(409).json({ error: "Verify the owner before approving this listing" });
+    }
     const [updated] = await db.update(properties).set(
       decision === "approve"
         ? { verified: true, status: "available", lastVerifiedAt: new Date() }
