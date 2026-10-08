@@ -112,7 +112,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
         owner: row.owner,
         phone: row.phone ?? "",
         submittedAt: row.submittedAt.toISOString(),
-        status: row.status,
+        status: row.status === "unverified" ? "pending" : row.status,
       })),
       moderationQueue,
     });
