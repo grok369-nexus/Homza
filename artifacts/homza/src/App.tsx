@@ -478,9 +478,9 @@ function AdminPage({ page }: { page: string }) {
         <p className="break-words text-xs text-muted-foreground md:block">{row.secondary}</p>
         <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('unverified') || row.status.toLowerCase().includes('open') ? 'bg-secondary/50' : 'bg-primary/10 text-primary'}`}>{row.status}</span>
         <div className="flex flex-wrap gap-2 md:justify-end">
-          {hasActions && page === 'verification' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
-          {hasActions && page === 'properties' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide</Button></>}
-          {hasActions && page === 'reports' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
+          {hasActions && page === 'verification' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
+          {hasActions && page === 'properties' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide</Button></>}
+          {hasActions && page === 'reports' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
         </div>
       </div>)}
     </div>
