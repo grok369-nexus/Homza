@@ -121,4 +121,66 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
   }
 });
 
+
+router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const rows = await db.select({
+      id: users.id,
+      fullName: users.fullName,
+      email: users.email,
+      role: users.role,
+      phone: users.phone,
+      ownerVerificationStatus: users.ownerVerificationStatus,
+      createdAt: users.createdAt,
+    }).from(users).orderBy(desc(users.createdAt)).limit(200);
+    return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/admin/owners", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const rows = await db.select({
+      id: users.id,
+      fullName: users.fullName,
+      email: users.email,
+      phone: users.phone,
+      ownerVerificationStatus: users.ownerVerificationStatus,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.role, "owner")).orderBy(desc(users.createdAt)).limit(200);
+    return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/admin/properties", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    return res.json(await listedProperties());
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/admin/reports", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const rows = await db.select({
+      id: reports.id,
+      propertyId: reports.propertyId,
+      reason: reports.reason,
+      status: reports.status,
+      createdAt: reports.createdAt,
+      propertyTitle: properties.title,
+      location: properties.location,
+    }).from(reports)
+      .innerJoin(properties, eq(reports.propertyId, properties.id))
+      .orderBy(desc(reports.createdAt))
+      .limit(200);
+    return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+  } catch (error) {
+    return next(error);
+  }
+});
+
 export default router;
