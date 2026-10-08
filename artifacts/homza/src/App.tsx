@@ -359,9 +359,9 @@ function OwnerSimplePage({ page, role = 'owner' }: { page: string; role?: 'tenan
 }
 
 function AdminHome() {
-  const { data, isLoading } = useGetAdminDashboard({ query: { queryKey: getGetAdminDashboardQueryKey() } });
-  const dash = data || { totalUsers: 2481, tenants: 2192, owners: 289, activeProperties: 764, pendingVerification: 18, monthlyRevenue: 18400000, reportedListings: 7, verificationQueue: [], moderationQueue: [] };
-  return <AppShell role="admin"><PageHeading eyebrow="Trust console · Tuesday 25 June" title="Keep the market honest." copy="The small decisions that keep Homza useful." action={<span className="inline-flex items-center gap-2 rounded-xl bg-secondary/40 px-3 py-2 text-xs font-bold"><span className="h-2 w-2 rounded-full bg-primary" /> Queue healthy</span>} /><QueryState loading={isLoading} error={false} retry={() => undefined}><div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Total users" value={dash.totalUsers.toLocaleString()} icon={Users} accent /><StatCard label="Active properties" value={dash.activeProperties} icon={Building2} /><StatCard label="To verify" value={dash.pendingVerification} icon={BadgeCheck} trend="Needs eyes" /><StatCard label="Reported listings" value={dash.reportedListings} icon={CircleAlert} /></div><div className="mt-8 grid gap-6 lg:grid-cols-2"><AdminQueue title="Verification queue" icon={BadgeCheck} count={dash.pendingVerification} href="/admin/verification" rows={dash.verificationQueue.length ? dash.verificationQueue.map((item) => ({ title: item.owner, detail: item.phone, status: item.status })) : [{ title: '18 owner profiles', detail: 'Awaiting document review', status: 'pending' }]} /><AdminQueue title="Moderation queue" icon={CircleAlert} count={dash.reportedListings} href="/admin/reports" rows={dash.moderationQueue.length ? dash.moderationQueue.map((item) => ({ title: item.title, detail: item.location, status: item.status })) : [{ title: '7 listings reported', detail: 'Review reasons and respond', status: 'needs review' }]} /></div><div className="mt-6 rounded-2xl border border-border bg-card p-6"><p className="font-mono-custom text-xs uppercase tracking-[.16em] text-accent">This month</p><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-display text-3xl font-bold">{money(dash.monthlyRevenue)}</p><p className="mt-1 text-sm text-muted-foreground">Marketplace revenue · +12.6% from last month</p></div><Link href="/admin/payments" data-testid="link-admin-payments" className="text-sm font-bold text-primary underline-link">View payments <ArrowRight size={15} className="ml-1 inline" /></Link></div></div></QueryState></AppShell>;
+  const { data, isLoading, isError, refetch } = useGetAdminDashboard({ query: { queryKey: getGetAdminDashboardQueryKey() } });
+  const dash = data || { totalUsers: 0, tenants: 0, owners: 0, activeProperties: 0, pendingVerification: 0, monthlyRevenue: 0, reportedListings: 0, verificationQueue: [], moderationQueue: [] };
+  return <AppShell role="admin"><PageHeading eyebrow="Trust console" title="Keep the market honest." copy="The small decisions that keep Homza useful." action={<span className="inline-flex items-center gap-2 rounded-xl bg-secondary/40 px-3 py-2 text-xs font-bold"><span className="h-2 w-2 rounded-full bg-primary" /> Live data</span>} /><QueryState loading={isLoading} error={isError} retry={() => { void refetch(); }}><div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Total users" value={dash.totalUsers.toLocaleString()} icon={Users} accent /><StatCard label="Active properties" value={dash.activeProperties} icon={Building2} /><StatCard label="To verify" value={dash.pendingVerification} icon={BadgeCheck} trend="Needs review" /><StatCard label="Open reports" value={dash.reportedListings} icon={CircleAlert} /></div><div className="mt-8 grid gap-6 lg:grid-cols-2"><AdminQueue title="Verification queue" icon={BadgeCheck} count={dash.pendingVerification} href="/admin/verification" rows={dash.verificationQueue.map((item) => ({ title: item.owner, detail: item.phone, status: item.status }))} /><AdminQueue title="Moderation queue" icon={CircleAlert} count={dash.moderationQueue.length} href="/admin/properties" rows={dash.moderationQueue.map((item) => ({ title: item.title, detail: item.location, status: item.status }))} /></div><div className="mt-6 rounded-2xl border border-border bg-card p-6"><p className="font-mono-custom text-xs uppercase tracking-[.16em] text-accent">Payments</p><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-display text-3xl font-bold">{money(dash.monthlyRevenue)}</p><p className="mt-1 text-sm text-muted-foreground">Recorded revenue. Payment integration is not active yet.</p></div><Link href="/admin/payments" data-testid="link-admin-payments" className="text-sm font-bold text-primary underline-link">Payment module <ArrowRight size={15} className="ml-1 inline" /></Link></div></div></QueryState></AppShell>;
 }
 
 function AdminQueue({ title, icon: Icon, count, href, rows }: { title: string; icon: typeof BadgeCheck; count: number; href: string; rows: { title: string; detail: string; status: string }[] }) {
@@ -369,10 +369,122 @@ function AdminQueue({ title, icon: Icon, count, href, rows }: { title: string; i
 }
 
 function AdminPage({ page }: { page: string }) {
-  const labels: Record<string, [string, string, string]> = { users: ['People on Homza', 'Users', 'Tenants and owners, in one clear view.'], owners: ['People behind the homes', 'Owners', 'Verify the person before the property.'], verification: ['Protect the signal', 'Verification queue', 'Review owner profiles that are ready for a closer look.'], properties: ['Keep quality high', 'Property moderation', 'Listings waiting for a human decision.'], reports: ['Listen closely', 'Reports', 'A reported listing is a trust question, not just a ticket.'], payments: ['Follow the trail', 'Payments', 'Marketplace payment history and status.'], subscriptions: ['Know the base', 'Subscriptions', 'Subscription activity across owners.'], archived: ['Keep the history', 'Archived listings', 'Listings no longer active on the marketplace.'], settings: ['Make the rules clear', 'Admin settings', 'Your moderation and notification preferences.'] };
+  const labels: Record<string, [string, string, string]> = {
+    users: ['People on Homza', 'Users', 'Accounts registered in the database.'],
+    owners: ['People behind the homes', 'Owners', 'Owner accounts and their verification status.'],
+    verification: ['Protect the signal', 'Verification queue', 'Review owner profiles before granting verified status.'],
+    properties: ['Keep quality high', 'Property moderation', 'Approve listings only after a real review.'],
+    reports: ['Listen closely', 'Reports', 'Review reports submitted about property listings.'],
+    payments: ['Follow the trail', 'Payments', 'Payment records will appear after payment integration.'],
+    subscriptions: ['Know the base', 'Subscriptions', 'Subscription records will appear after billing is implemented.'],
+    archived: ['Keep the history', 'Archived listings', 'Archived listing tools are not active yet.'],
+    settings: ['Make the rules clear', 'Admin settings', 'Administration settings are not active yet.']
+  };
   const [eyebrow, title, copy] = labels[page] || labels.users;
-  const rows = page === 'users' ? [['Akol D.', 'Tenant', 'Active'], ['Amina N.', 'Owner', 'Verified'], ['Daniel O.', 'Tenant', 'Active'], ['Grace L.', 'Owner', 'Review']] : page === 'verification' ? [['Moses R.', '+256 702 345 678', 'Pending'], ['Grace L.', '+256 703 456 789', 'Pending']] : [['Quiet two-bedroom near the lake', 'Muyenga, Kampala', 'Available'], ['Sunlit bungalow with garden', 'Kira, Wakiso', 'Available'], ['Modern studio in Kololo', 'Kololo, Kampala', 'Reported']]; 
-  return <AppShell role="admin"><PageHeading eyebrow={eyebrow} title={title} copy={copy} action={<Button variant="outline" data-testid="button-admin-filter"><ListFilter size={16} /> Filter</Button>} /><div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card"><div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4"><p className="text-sm font-bold">{rows.length} items</p><div className="flex items-center gap-2 text-xs text-muted-foreground"><Search size={14} /> Search records</div></div>{rows.map((row, index) => <div key={row[0]} data-testid={`row-admin-${page}-${index}`} className="grid gap-2 border-b border-border px-5 py-4 last:border-0 md:grid-cols-[1fr_1fr_130px_80px] md:items-center"><div><p className="text-sm font-bold">{row[0]}</p><p className="mt-1 text-xs text-muted-foreground md:hidden">{row[1]}</p></div><p className="hidden text-xs text-muted-foreground md:block">{row[1]}</p><span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-bold ${row[2].toLowerCase().includes('pending') || row[2].toLowerCase().includes('review') || row[2].toLowerCase().includes('reported') ? 'bg-secondary/50' : 'bg-primary/10 text-primary'}`}>{row[2]}</span><button data-testid={`button-admin-action-${index}`} className="text-left text-xs font-bold text-primary underline-link md:text-right">Review</button></div>)}</div></AppShell>;
+  const [rows, setRows] = useState<Array<{ id: string; primary: string; secondary: string; status: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const endpoint: Record<string, string> = {
+    users: '/api/admin/users',
+    owners: '/api/admin/owners',
+    verification: '/api/dashboard/admin',
+    properties: '/api/admin/properties',
+    reports: '/api/admin/reports'
+  };
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      if (!endpoint[page]) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch(endpoint[page], { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not load these records.');
+        const raw: Array<Record<string, unknown>> = page === 'verification'
+          ? (payload.verificationQueue || [])
+          : Array.isArray(payload) ? payload : [];
+        const mapped = raw.map((row) => {
+          const id = String(row.id || '');
+          if (page === 'users') return { id, primary: String(row.fullName || 'Unnamed user'), secondary: String(row.email || ''), status: String(row.role || 'tenant') };
+          if (page === 'owners') return { id, primary: String(row.fullName || 'Unnamed owner'), secondary: [row.email, row.phone].filter(Boolean).join(' · '), status: String(row.ownerVerificationStatus || 'unverified') };
+          if (page === 'verification') return { id, primary: String(row.owner || 'Owner'), secondary: String(row.phone || ''), status: String(row.status || 'pending') };
+          if (page === 'properties') return { id, primary: String(row.title || 'Untitled listing'), secondary: `${String(row.location || '')} · ${money(Number(row.rent || 0))}`, status: String(row.status || 'pending') };
+          return { id, primary: String(row.propertyTitle || 'Reported listing'), secondary: `${String(row.reason || '')} · ${String(row.location || '')}`, status: String(row.status || 'open') };
+        });
+        if (active) setRows(mapped);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Could not load these records.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [page]);
+
+  const performAction = async (row: { id: string }, action: 'approve' | 'reject' | 'resolve' | 'dismiss') => {
+    setBusy(row.id);
+    setError('');
+    setNotice('');
+    let url = '';
+    let body: Record<string, string> = {};
+    if (page === 'verification') {
+      url = `/api/admin/owners/${row.id}/verification`;
+      body = { status: action === 'approve' ? 'verified' : 'rejected' };
+    } else if (page === 'properties') {
+      url = `/api/admin/properties/${row.id}/review`;
+      body = { decision: action };
+    } else if (page === 'reports') {
+      url = `/api/admin/reports/${row.id}`;
+      body = { status: action === 'resolve' ? 'resolved' : 'dismissed' };
+    } else {
+      setBusy(null);
+      return;
+    }
+    try {
+      const response = await fetch(url, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Action failed. Please try again.');
+      if (page === 'reports') {
+        setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: String(payload.status || body.status) } : item));
+      } else {
+        setRows((current) => current.filter((item) => item.id !== row.id));
+      }
+      setNotice('Changes saved.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const hasActions = page === 'verification' || page === 'properties' || page === 'reports';
+  return <AppShell role="admin"><PageHeading eyebrow={eyebrow} title={title} copy={copy} action={<Button variant="outline" onClick={() => window.location.reload()}><ArrowRight size={16} /> Refresh</Button>} />
+    <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4"><p className="text-sm font-bold">{loading ? 'Loading records…' : `${rows.length} records`}</p><div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} /> Admin access</div></div>
+      {error && <p role="alert" className="m-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+      {notice && <p role="status" className="m-4 rounded-xl bg-primary/5 p-3 text-sm font-semibold text-primary">{notice}</p>}
+      {!loading && !error && rows.length === 0 && <div className="px-5 py-12 text-center"><p className="font-semibold">{endpoint[page] ? 'Nothing needs attention here.' : 'This module is not connected yet.'}</p><p className="mt-2 text-sm text-muted-foreground">{endpoint[page] ? 'Records will appear here when they are created.' : 'We will build this after the core listing and account flows are stable.'}</p></div>}
+      {rows.map((row, index) => <div key={row.id} data-testid={`row-admin-${page}-${index}`} className="grid gap-3 border-b border-border px-5 py-4 last:border-0 md:grid-cols-[1fr_1fr_130px_auto] md:items-center">
+        <div><p className="break-words text-sm font-bold">{row.primary}</p><p className="mt-1 text-xs text-muted-foreground md:hidden">{row.secondary}</p></div>
+        <p className="break-words text-xs text-muted-foreground md:block">{row.secondary}</p>
+        <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('unverified') || row.status.toLowerCase().includes('open') ? 'bg-secondary/50' : 'bg-primary/10 text-primary'}`}>{row.status}</span>
+        <div className="flex flex-wrap gap-2 md:justify-end">
+          {hasActions && page === 'verification' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
+          {hasActions && page === 'properties' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide</Button></>}
+          {hasActions && page === 'reports' && <><Button size="sm" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
+        </div>
+      </div>)}
+    </div>
+  </AppShell>;
 }
 
 function About() {
