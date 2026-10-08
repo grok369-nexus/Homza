@@ -123,7 +123,7 @@ router.patch("/properties/:id", requireAuth, requireRole("owner", "admin"), asyn
   try {
     const params = GetPropertyParams.safeParse(req.params);
     const body = UpdatePropertyBody.safeParse(req.body);
-    if (!params.success || !body.success) return res.status(400).json({ error: "Invalid property update" });
+    if (!params.success || !body.success || !isUuid(params.data.id)) return res.status(400).json({ error: "Invalid property update" });
     const existing = await propertyWithOwner(params.data.id);
     if (!existing) return res.status(404).json({ error: "Property not found" });
     if (req.homzaUser!.role !== "admin" && existing.property.ownerId !== req.homzaUser!.id) {
@@ -155,7 +155,9 @@ router.patch("/properties/:id", requireAuth, requireRole("owner", "admin"), asyn
       update.status = "available";
     }
 
+    if (Object.keys(update).length === 0) return res.status(400).json({ error: "No supported fields to update" });
     const [updated] = await db.update(properties).set(update).where(eq(properties.id, existing.property.id)).returning();
+    if (!updated) return res.status(404).json({ error: "Property not found" });
     const record = await propertyWithOwner(updated.id);
     return res.json(toPropertyDto(record!.property, record!.owner));
   } catch (error) {
