@@ -303,6 +303,25 @@ router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin")
   }
 });
 
+
+router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const status = req.body?.status;
+    if (!isUuid(id)) return res.status(404).json({ error: "Report not found" });
+    if (status !== "reviewing" && status !== "resolved" && status !== "dismissed") {
+      return res.status(400).json({ error: "Choose reviewing, resolved or dismissed" });
+    }
+    const [updated] = await db.update(reports).set({ status })
+      .where(eq(reports.id, id))
+      .returning({ id: reports.id, status: reports.status });
+    if (!updated) return res.status(404).json({ error: "Report not found" });
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get("/owner/leads", requireAuth, requireRole("owner", "admin"), (_req, res) => res.json([]));
 
 router.post("/reports", optionalAuth, async (req, res, next) => {
