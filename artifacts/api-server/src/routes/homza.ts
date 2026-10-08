@@ -11,7 +11,7 @@ import {
   UpdatePropertyBody,
 } from "@workspace/api-zod";
 import { db, favorites, properties, reports, savedSearches, users, contactMessages } from "@workspace/db";
-import { requireAuth, requireRole } from "../lib/auth";
+import { optionalAuth, requireAuth, requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -97,7 +97,7 @@ router.get("/properties", async (req, res, next) => {
   }
 });
 
-router.get("/properties/:id", async (req, res, next) => {
+router.get("/properties/:id", optionalAuth, async (req, res, next) => {
   try {
     const parsed = GetPropertyParams.safeParse(req.params);
     if (!parsed.success) return res.status(400).json({ error: "Invalid property id" });
@@ -262,7 +262,7 @@ router.post("/searches", requireAuth, async (req, res, next) => {
 
 router.get("/owner/leads", requireAuth, requireRole("owner", "admin"), (_req, res) => res.json([]));
 
-router.post("/reports", async (req, res, next) => {
+router.post("/reports", optionalAuth, async (req, res, next) => {
   try {
     const body = ReportPropertyBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Please select a report reason" });
@@ -279,7 +279,7 @@ router.post("/reports", async (req, res, next) => {
   }
 });
 
-router.post("/contact", async (req, res, next) => {
+router.post("/contact", optionalAuth, async (req, res, next) => {
   try {
     const body = SubmitContactMessageBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Please complete the contact form" });
