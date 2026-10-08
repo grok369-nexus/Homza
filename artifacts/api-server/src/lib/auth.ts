@@ -112,3 +112,27 @@ export function requireRole(...allowed: HomzaRole[]) {
     return next();
   };
 }
+
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token = req.cookies?.[SESSION_COOKIE];
+    if (typeof token !== "string" || token.length < 32) return next();
+    const [record] = await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        email: users.email,
+        role: users.role,
+        phone: users.phone,
+        ownerVerificationStatus: users.ownerVerificationStatus,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
+      .limit(1);
+    if (record) req.homzaUser = record as AuthenticatedUser;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
