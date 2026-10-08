@@ -1,62 +1,124 @@
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { properties, visibleProperties, leads, savedSearches } from "../lib/homza-data";
+import { db, favorites, properties, reports, savedSearches, users } from "@workspace/db";
+import { requireAuth, requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/tenant", (_req, res) => {
-  const available = visibleProperties();
-  res.json({
-    savedProperties: 2,
-    savedSearches: savedSearches.length,
-    recentViews: 14,
-    messages: 3,
-    recommended: available.slice(0, 3),
-    nearby: available.slice(2, 5),
-    recentlyViewed: available.slice(1, 4),
-  });
+function toPropertyDto(row: typeof properties.$inferSelect, owner: typeof users.$inferSelect) {
+  return {
+    id: row.id,
+    title: row.title,
+    type: row.type,
+    location: row.location,
+    district: row.district,
+    neighborhood: row.neighborhood,
+    rent: row.rent,
+    advanceMonths: row.advanceMonths,
+    bedrooms: row.bedrooms,
+    bathrooms: row.bathrooms,
+    size: row.size,
+    image: row.image,
+    images: row.images ?? [],
+    description: row.description,
+    amenities: row.amenities ?? [],
+    status: row.status,
+    verified: row.verified,
+    owner: {
+      name: owner.fullName,
+      phone: owner.phone ?? "",
+      initials: owner.fullName.split(/\s+/).map((part) => part[0] ?? "").join("").slice(0, 2).toUpperCase(),
+      verified: owner.ownerVerificationStatus === "verified",
+    },
+    views: row.views,
+    leads: row.leads,
+    createdAt: row.createdAt.toISOString().slice(0, 10),
+    lastVerifiedAt: row.lastVerifiedAt?.toISOString().slice(0, 10) ?? null,
+  };
+}
+
+async function listedProperties(whereClause?: ReturnType<typeof eq>) {
+  const rows = await db.select({ property: properties, owner: users })
+    .from(properties)
+    .innerJoin(users, eq(properties.ownerId, users.id))
+    .where(whereClause)
+    .orderBy(desc(properties.createdAt))
+    .limit(200);
+  return rows.map(({ property, owner }) => toPropertyDto(property, owner));
+}
+
+router.get("/dashboard/tenant", requireAuth, requireRole("tenant"), async (req, res, next) => {
+  try {
+    const [favoriteCount] = await db.select({ value: count() }).from(favorites).where(eq(favorites.userId, req.homzaUser!.id));
+    const [searchCount] = await db.select({ value: count() }).from(savedSearches).where(eq(savedSearches.userId, req.homzaUser!.id));
+    const available = await listedProperties(eq(properties.status, "available"));
+    return res.json({
+      savedProperties: favoriteCount.value,
+      savedSearches: searchCount.value,
+      recentViews: 0,
+      messages: 0,
+      recommended: available.slice(0, 3),
+      nearby: available.slice(3, 6),
+      recentlyViewed: [],
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
-router.get("/dashboard/owner", (_req, res) => {
-  const ownerProperties = properties.filter((property) => property.owner.name === "Michael Okello");
-  res.json({
-    totalProperties: ownerProperties.length,
-    activeListings: ownerProperties.filter((property) => property.status === "available").length,
-    totalViews: ownerProperties.reduce((sum, property) => sum + property.views, 0),
-    leads: ownerProperties.reduce((sum, property) => sum + property.leads, 0),
-    weeklyViews: [
-      { label: "Mon", value: 180 },
-      { label: "Tue", value: 150 },
-      { label: "Wed", value: 220 },
-      { label: "Thu", value: 305 },
-      { label: "Fri", value: 245 },
-      { label: "Sat", value: 165 },
-      { label: "Sun", value: 112 },
-    ],
-    properties: ownerProperties,
-    activity: [
-      { id: "activity-1", text: "New view on 2 Bedroom Apartment — Kyanja", time: "2 minutes ago", kind: "view" },
-      { id: "activity-2", text: "New lead from WhatsApp", time: "15 minutes ago", kind: "lead" },
-      { id: "activity-3", text: "Availability check sent for 3 properties", time: "1 hour ago", kind: "reminder" },
-    ],
-  });
+router.get("/dashboard/owner", requireAuth, requireRole("owner"), async (req, res, next) => {
+  try {
+    const rows = await db.select().from(properties).where(eq(properties.ownerId, req.homzaUser!.id)).orderBy(desc(properties.createdAt));
+    return res.json({
+      totalProperties: rows.length,
+      activeListings: rows.filter((property) => property.status === "available").length,
+      totalViews: rows.reduce((sum, property) => sum + property.views, 0),
+      leads: rows.reduce((sum, property) => sum + property.leads, 0),
+      weeklyViews: [],
+      properties: await listedProperties(eq(properties.ownerId, req.homzaUser!.id)),
+      activity: [],
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
-router.get("/dashboard/admin", (_req, res) => {
-  res.json({
-    totalUsers: 248,
-    tenants: 201,
-    owners: 47,
-    activeProperties: visibleProperties().length,
-    pendingVerification: 6,
-    monthlyRevenue: 1840000,
-    reportedListings: 3,
-    verificationQueue: [
-      { id: "verify-1", owner: "Peter Mugisha", phone: "+256 783 419 027", submittedAt: "Today, 09:42", status: "under_review" },
-      { id: "verify-2", owner: "Grace Achieng", phone: "+256 779 314 880", submittedAt: "Yesterday", status: "pending" },
-      { id: "verify-3", owner: "Robert Ssentongo", phone: "+256 704 182 662", submittedAt: "Aug 30, 2026", status: "pending" },
-    ],
-    moderationQueue: properties.filter((property) => property.status === "pending"),
-  });
+router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const [userCount] = await db.select({ value: count() }).from(users);
+    const [tenantCount] = await db.select({ value: count() }).from(users).where(eq(users.role, "tenant"));
+    const [ownerCount] = await db.select({ value: count() }).from(users).where(eq(users.role, "owner"));
+    const [activeCount] = await db.select({ value: count() }).from(properties).where(eq(properties.status, "available"));
+    const [pendingVerificationCount] = await db.select({ value: count() }).from(users).where(and(eq(users.role, "owner"), inArray(users.ownerVerificationStatus, ["unverified", "pending"])));
+    const [reportCount] = await db.select({ value: count() }).from(reports).where(inArray(reports.status, ["open", "reviewing"]));
+    const verificationQueue = await db.select({
+      id: users.id,
+      owner: users.fullName,
+      phone: users.phone,
+      submittedAt: users.createdAt,
+      status: users.ownerVerificationStatus,
+    }).from(users).where(and(eq(users.role, "owner"), inArray(users.ownerVerificationStatus, ["unverified", "pending"]))).orderBy(desc(users.createdAt)).limit(50);
+    const moderationQueue = await listedProperties(eq(properties.status, "pending"));
+    return res.json({
+      totalUsers: userCount.value,
+      tenants: tenantCount.value,
+      owners: ownerCount.value,
+      activeProperties: activeCount.value,
+      pendingVerification: pendingVerificationCount.value,
+      monthlyRevenue: 0,
+      reportedListings: reportCount.value,
+      verificationQueue: verificationQueue.map((row) => ({
+        id: row.id,
+        owner: row.owner,
+        phone: row.phone ?? "",
+        submittedAt: row.submittedAt.toISOString(),
+        status: row.status,
+      })),
+      moderationQueue,
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 export default router;
