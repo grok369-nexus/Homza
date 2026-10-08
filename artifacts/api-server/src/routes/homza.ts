@@ -147,10 +147,12 @@ router.patch("/properties/:id", requireAuth, requireRole("owner", "admin"), asyn
         update.lastVerifiedAt = input.verified ? new Date() : null;
       }
       if (["available", "pending", "rented", "paused", "hidden"].includes(String(input.status))) {
-        update.status = input.status as typeof properties.$inferInsert.status;
+        update.status = input.status as "available" | "pending" | "rented" | "paused" | "hidden";
       }
-    } else if (["available", "rented", "paused", "hidden"].includes(String(input.status))) {
-      update.status = input.status as typeof properties.$inferInsert.status;
+    } else if (["rented", "paused", "hidden"].includes(String(input.status))) {
+      update.status = input.status as "rented" | "paused" | "hidden";
+    } else if (input.status === "available" && existing.property.verified) {
+      update.status = "available";
     }
 
     const [updated] = await db.update(properties).set(update).where(eq(properties.id, existing.property.id)).returning();
@@ -256,6 +258,46 @@ router.post("/searches", requireAuth, async (req, res, next) => {
     if (!body.success) return res.status(400).json({ error: "Please name your saved search" });
     const [saved] = await db.insert(savedSearches).values({ userId: req.homzaUser!.id, ...body.data }).returning();
     return res.status(201).json({ id: saved.id, name: saved.name, location: saved.location, summary: saved.summary, matches: 0, updatedAt: saved.createdAt.toISOString() });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+
+router.patch("/admin/properties/:id/review", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const decision = req.body?.decision;
+    if (!isUuid(id)) return res.status(404).json({ error: "Property not found" });
+    if (decision !== "approve" && decision !== "reject") {
+      return res.status(400).json({ error: "Choose approve or reject" });
+    }
+    const [updated] = await db.update(properties).set(
+      decision === "approve"
+        ? { verified: true, status: "available", lastVerifiedAt: new Date() }
+        : { verified: false, status: "hidden", lastVerifiedAt: null },
+    ).where(eq(properties.id, id)).returning({ id: properties.id });
+    if (!updated) return res.status(404).json({ error: "Property not found" });
+    const record = await propertyWithOwner(updated.id);
+    return res.json(toPropertyDto(record!.property, record!.owner));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const status = req.body?.status;
+    if (!isUuid(id)) return res.status(404).json({ error: "Owner not found" });
+    if (status !== "verified" && status !== "rejected" && status !== "pending") {
+      return res.status(400).json({ error: "Choose verified, pending or rejected" });
+    }
+    const [updated] = await db.update(users).set({ ownerVerificationStatus: status })
+      .where(and(eq(users.id, id), eq(users.role, "owner")))
+      .returning({ id: users.id, fullName: users.fullName, ownerVerificationStatus: users.ownerVerificationStatus });
+    if (!updated) return res.status(404).json({ error: "Owner not found" });
+    return res.json(updated);
   } catch (error) {
     return next(error);
   }
