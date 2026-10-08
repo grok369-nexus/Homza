@@ -14,6 +14,7 @@ import { db, favorites, properties, reports, savedSearches, users, contactMessag
 import { optionalAuth, requireAuth, requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 function toPropertyDto(row: typeof properties.$inferSelect, owner: typeof users.$inferSelect) {
   return {
@@ -100,7 +101,7 @@ router.get("/properties", async (req, res, next) => {
 router.get("/properties/:id", optionalAuth, async (req, res, next) => {
   try {
     const parsed = GetPropertyParams.safeParse(req.params);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid property id" });
+    if (!parsed.success || !isUuid(parsed.data.id)) return res.status(404).json({ error: "Property not found" });
     const record = await propertyWithOwner(parsed.data.id);
     if (!record) return res.status(404).json({ error: "Property not found" });
     const isOwner = req.homzaUser?.id === record.property.ownerId;
@@ -219,7 +220,7 @@ router.get("/favorites", requireAuth, async (req, res, next) => {
 router.post("/favorites/:propertyId", requireAuth, async (req, res, next) => {
   try {
     const params = AddFavoriteParams.safeParse(req.params);
-    if (!params.success) return res.status(400).json({ error: "Invalid property id" });
+    if (!params.success || !isUuid(params.data.propertyId)) return res.status(404).json({ error: "Property not found" });
     const [property] = await db.select().from(properties).where(and(eq(properties.id, params.data.propertyId), eq(properties.status, "available"))).limit(1);
     if (!property) return res.status(404).json({ error: "Property not found" });
     await db.insert(favorites).values({ userId: req.homzaUser!.id, propertyId: property.id }).onConflictDoNothing();
@@ -232,7 +233,7 @@ router.post("/favorites/:propertyId", requireAuth, async (req, res, next) => {
 router.delete("/favorites/:propertyId", requireAuth, async (req, res, next) => {
   try {
     const params = AddFavoriteParams.safeParse(req.params);
-    if (!params.success) return res.status(400).json({ error: "Invalid property id" });
+    if (!params.success || !isUuid(params.data.propertyId)) return res.status(404).json({ error: "Property not found" });
     await db.delete(favorites).where(and(eq(favorites.userId, req.homzaUser!.id), eq(favorites.propertyId, params.data.propertyId)));
     return res.status(204).send();
   } catch (error) {
@@ -266,6 +267,7 @@ router.post("/reports", optionalAuth, async (req, res, next) => {
   try {
     const body = ReportPropertyBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Please select a report reason" });
+    if (!isUuid(body.data.propertyId)) return res.status(404).json({ error: "Property not found" });
     const [property] = await db.select({ id: properties.id }).from(properties).where(eq(properties.id, body.data.propertyId)).limit(1);
     if (!property) return res.status(404).json({ error: "Property not found" });
     const [report] = await db.insert(reports).values({
