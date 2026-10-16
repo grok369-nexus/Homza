@@ -12,11 +12,14 @@ import {
 } from "@workspace/api-zod";
 import { db, favorites, properties, reports, savedSearches, users, contactMessages } from "@workspace/db";
 import { optionalAuth, requireAuth, requireRole } from "../lib/auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-function toPropertyDto(row: typeof properties.$inferSelect, owner: typeof users.$inferSelect) {
+type PropertyOwner = Pick<typeof users.$inferSelect, "fullName" | "phone" | "ownerVerificationStatus">;
+
+function toPropertyDto(row: typeof properties.$inferSelect, owner: PropertyOwner) {
   return {
     id: row.id,
     title: row.title,
@@ -58,7 +61,7 @@ async function propertyWithOwner(id: string) {
   return record;
 }
 
-const sortProperties = (rows: Array<{ property: typeof properties.$inferSelect; owner: typeof users.$inferSelect }>, sort?: string) => {
+const sortProperties = (rows: Array<{ property: typeof properties.$inferSelect; owner: PropertyOwner }>, sort?: string) => {
   const result = [...rows];
   if (sort === "lowest") return result.sort((a, b) => a.property.rent - b.property.rent);
   if (sort === "highest") return result.sort((a, b) => b.property.rent - a.property.rent);
@@ -81,7 +84,14 @@ router.get("/properties", async (req, res, next) => {
     if (bedrooms) conditions.push(gte(properties.bedrooms, bedrooms));
     if (advanceMonths) conditions.push(lte(properties.advanceMonths, advanceMonths));
 
-    const rows = await db.select({ property: properties, owner: users })
+    const rows = await db.select({
+      property: properties,
+      owner: {
+        fullName: users.fullName,
+        phone: users.phone,
+        ownerVerificationStatus: users.ownerVerificationStatus,
+      },
+    })
       .from(properties)
       .innerJoin(users, eq(properties.ownerId, users.id))
       .where(and(...conditions))
@@ -94,6 +104,7 @@ router.get("/properties", async (req, res, next) => {
     }
     return res.json(sortProperties(filtered, sort).map(({ property, owner }) => toPropertyDto(property, owner)));
   } catch (error) {
+    logger.error({ err: error }, "Failed to list public properties");
     return next(error);
   }
 });
