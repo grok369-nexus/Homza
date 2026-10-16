@@ -104,7 +104,37 @@ router.get("/properties", async (req, res, next) => {
     }
     return res.json(sortProperties(filtered, sort).map(({ property, owner }) => toPropertyDto(property, owner)));
   } catch (error) {
-    logger.error({ err: error }, "Failed to list public properties");
+    // Drizzle's query error can hide the original PostgreSQL error in a non-enumerable cause.
+    // Log a safe, explicit diagnostic without connection strings or request secrets.
+    const err = error instanceof Error ? error as Error & {
+      code?: string;
+      detail?: string;
+      hint?: string;
+      severity?: string;
+      schema?: string;
+      table?: string;
+      column?: string;
+      constraint?: string;
+      cause?: unknown;
+    } : undefined;
+    const cause = err?.cause && typeof err.cause === "object"
+      ? err.cause as Record<string, unknown>
+      : undefined;
+    logger.error({
+      errorName: err?.name ?? "UnknownError",
+      errorMessage: err?.message ?? String(error),
+      errorCode: err?.code ?? (typeof cause?.code === "string" ? cause.code : undefined),
+      errorDetail: err?.detail ?? (typeof cause?.detail === "string" ? cause.detail : undefined),
+      errorHint: err?.hint ?? (typeof cause?.hint === "string" ? cause.hint : undefined),
+      errorSeverity: err?.severity ?? (typeof cause?.severity === "string" ? cause.severity : undefined),
+      errorSchema: err?.schema ?? (typeof cause?.schema === "string" ? cause.schema : undefined),
+      errorTable: err?.table ?? (typeof cause?.table === "string" ? cause.table : undefined),
+      errorColumn: err?.column ?? (typeof cause?.column === "string" ? cause.column : undefined),
+      errorConstraint: err?.constraint ?? (typeof cause?.constraint === "string" ? cause.constraint : undefined),
+      causeName: typeof cause?.name === "string" ? cause.name : undefined,
+      causeMessage: typeof cause?.message === "string" ? cause.message : undefined,
+      stack: err?.stack,
+    }, "Failed to list public properties");
     return next(error);
   }
 });
