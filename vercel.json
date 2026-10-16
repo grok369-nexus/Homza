@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/homza build",
+  "buildCommand": "pnpm --filter @workspace/api-server build && pnpm --filter @workspace/homza build",
   "outputDirectory": "artifacts/homza/dist/public",
   "rewrites": [
     {
