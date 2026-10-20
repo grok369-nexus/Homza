@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, sessions, users } from "@workspace/db";
+import { logger } from "../lib/logger";
 import {
   clearSessionCookie,
   hashToken,
@@ -13,6 +14,23 @@ import {
 
 const router: IRouter = Router();
 const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+
+function logAuthFailure(action: "register" | "login" | "logout", error: unknown) {
+  const err = error instanceof Error ? error as Error & { code?: string; cause?: unknown; constraint?: string; table?: string; column?: string; severity?: string } : undefined;
+  const cause = err?.cause && typeof err.cause === "object" ? err.cause as Record<string, unknown> : undefined;
+  // Never log credentials, passwords, cookies, or connection strings.
+  logger.error({
+    action,
+    errorName: err?.name ?? "UnknownError",
+    errorCode: err?.code ?? (typeof cause?.code === "string" ? cause.code : undefined),
+    errorSeverity: err?.severity ?? (typeof cause?.severity === "string" ? cause.severity : undefined),
+    errorTable: err?.table ?? (typeof cause?.table === "string" ? cause.table : undefined),
+    errorColumn: err?.column ?? (typeof cause?.column === "string" ? cause.column : undefined),
+    errorConstraint: err?.constraint ?? (typeof cause?.constraint === "string" ? cause.constraint : undefined),
+    causeName: typeof cause?.name === "string" ? cause.name : undefined,
+  }, "Homza authentication request failed");
+}
+
 
 function publicUser(user: {
   id: string;
@@ -83,6 +101,7 @@ router.post("/auth/register", async (req, res, next) => {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
+    logAuthFailure("register", error);
     return next(error);
   }
 });
@@ -103,6 +122,7 @@ router.post("/auth/login", async (req, res, next) => {
     await startSession(user.id, res);
     return res.json({ user: publicUser(user) });
   } catch (error) {
+    logAuthFailure("login", error);
     return next(error);
   }
 });
@@ -116,6 +136,7 @@ router.post("/auth/logout", async (req, res, next) => {
     clearSessionCookie(res);
     return res.status(204).send();
   } catch (error) {
+    logAuthFailure("logout", error);
     return next(error);
   }
 });
