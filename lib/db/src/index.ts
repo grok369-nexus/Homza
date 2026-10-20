@@ -4,29 +4,59 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-// Vercel's IPv4-only runtime cannot reach Supabase's IPv6-only direct endpoint.
-// Keep DATABASE_URL available for migrations/local use, and prefer the IPv4-compatible
-// Supavisor URL when configured for deployed API traffic.
-const connectionString = process.env.SUPABASE_POOLER_URL ?? process.env.DATABASE_URL;
+// Prefer the IPv4-compatible Supavisor URL for Vercel. Keep DATABASE_URL as
+// a fallback for local development and migration tooling.
+const poolerUrl = process.env.SUPABASE_POOLER_URL?.trim();
+const databaseUrl = process.env.DATABASE_URL?.trim();
+const selectedEnvName = poolerUrl ? "SUPABASE_POOLER_URL" : "DATABASE_URL";
+const rawConnectionString = poolerUrl || databaseUrl;
 
-if (!connectionString) {
+if (!rawConnectionString) {
   throw new Error(
-    "Set SUPABASE_POOLER_URL for deployed traffic (recommended) or DATABASE_URL for local/direct database access.",
+    "Set SUPABASE_POOLER_URL for deployed traffic or DATABASE_URL for local/direct database access.",
   );
 }
 
-const connectionHost = (() => {
-  try {
-    return new URL(connectionString).hostname;
-  } catch {
-    return "";
-  }
-})();
+let connectionString = rawConnectionString;
+let connectionUrl: URL;
+
+try {
+  connectionUrl = new URL(rawConnectionString);
+} catch {
+  throw new Error(`${selectedEnvName} is not a valid PostgreSQL connection URL.`);
+}
+
+// Supavisor requires the project-qualified database username. Correct the
+// common "postgres" username mistake automatically for this project's pooler.
+const isSupabasePooler = connectionUrl.hostname.endsWith(".pooler.supabase.com");
+const expectedPoolerUsername = "postgres.iagdyoixmasimwkvykoz";
+
+if (isSupabasePooler && connectionUrl.username === "postgres") {
+  connectionUrl.username = expectedPoolerUsername;
+  connectionString = connectionUrl.toString();
+  console.warn(
+    `[${selectedEnvName}] Pooler URL had username "postgres"; corrected it to the project-qualified Supabase username.`,
+  );
+}
+
+if (isSupabasePooler && connectionUrl.username !== expectedPoolerUsername) {
+  throw new Error(
+    `${selectedEnvName} uses the Supabase pooler but has an unexpected database username. Expected the project-qualified username.`,
+  );
+}
+
+// Log connection routing metadata only—never log the URL or its password.
+console.info("[database] Connection configuration", {
+  source: selectedEnvName,
+  host: connectionUrl.hostname,
+  username: connectionUrl.username,
+  pooler: isSupabasePooler,
+});
 
 if (
-  connectionHost.startsWith("db.") &&
-  connectionHost.endsWith(".supabase.co") &&
-  !process.env.SUPABASE_POOLER_URL
+  connectionUrl.hostname.startsWith("db.") &&
+  connectionUrl.hostname.endsWith(".supabase.co") &&
+  !poolerUrl
 ) {
   console.warn(
     "DATABASE_URL points to Supabase's direct database endpoint. Vercel may not resolve it because direct endpoints are IPv6-only; set SUPABASE_POOLER_URL to the project's shared Supavisor connection string.",
