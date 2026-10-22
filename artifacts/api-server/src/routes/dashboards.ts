@@ -139,6 +139,42 @@ router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, 
   }
 });
 
+router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const role = req.body?.role;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // Admin promotion is intentionally not available through this endpoint.
+    // A trusted operator must provision administrator access outside the public UI.
+    if (role !== "tenant" && role !== "owner") {
+      return res.status(400).json({ error: "Role must be tenant or owner. Admin access cannot be granted here." });
+    }
+    if (id === req.homzaUser!.id) {
+      return res.status(409).json({ error: "You cannot change your own role." });
+    }
+    const [target] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, id)).limit(1);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    if (target.role === "admin") {
+      return res.status(409).json({ error: "Administrator roles cannot be changed from this screen." });
+    }
+    const [updated] = await db.update(users)
+      .set({
+        role,
+        ownerVerificationStatus: role === "owner"
+          ? (target.role === "owner" ? undefined : "pending")
+          : "unverified",
+      })
+      .where(eq(users.id, id))
+      .returning({ id: users.id, fullName: users.fullName, email: users.email, role: users.role, ownerVerificationStatus: users.ownerVerificationStatus });
+    if (!updated) return res.status(404).json({ error: "User not found" });
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get("/admin/owners", requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
