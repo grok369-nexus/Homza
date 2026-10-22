@@ -209,7 +209,7 @@ function PropertyDetail() {
   const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
   const property = data;
   const [saved, setSaved] = useState(false);
-  useEffect(() => { setSaved(Boolean(property && favoriteData?.some((item) => item.id === property.id)); }, [property?.id, favoriteData]);
+  useEffect(() => { setSaved(Boolean(property && favoriteData?.some((item) => item.id === property.id))); }, [property?.id, favoriteData]);
   const [contacted, setContacted] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const favoriteAdd = useAddFavorite();
