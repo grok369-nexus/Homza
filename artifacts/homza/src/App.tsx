@@ -53,6 +53,7 @@ function Logo({ inverse = false }: { inverse?: boolean }) {
 
 function PublicHeader() {
   const [open, setOpen] = useState(false);
+  const currentUser = useCurrentUser();
   return <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur">
     <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 lg:px-8">
       <Logo />
@@ -62,13 +63,12 @@ function PublicHeader() {
         <Link href="/contact" data-testid="link-nav-contact" className="transition-colors hover:text-primary">Contact</Link>
       </nav>
       <div className="hidden items-center gap-3 md:flex">
-        <Link href="/login" data-testid="link-nav-login" className="rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground hover:text-primary">Sign in</Link>
-        <Link href="/register" data-testid="link-nav-register" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-105">Join Homza <ArrowUpRight size={15} /></Link>
+        {currentUser ? <Link href={currentUser.role === 'owner' ? '/owner' : currentUser.role === 'admin' ? '/admin' : '/dashboard'} data-testid="link-nav-account" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-105">My account <ArrowUpRight size={15} /></Link> : <><Link href="/login" data-testid="link-nav-login" className="rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground hover:text-primary">Sign in</Link><Link href="/register" data-testid="link-nav-register" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-105">Join Homza <ArrowUpRight size={15} /></Link></>}
       </div>
       <button onClick={() => setOpen((value) => !value)} data-testid="button-mobile-menu" className="rounded-lg p-2 md:hidden"><Menu size={21} /></button>
     </div>
     {open && <div className="border-t border-border bg-card p-5 md:hidden">
-      <div className="flex flex-col gap-4 text-sm font-bold"><Link href="/properties" data-testid="link-mobile-properties">Find a home</Link><Link href="/about" data-testid="link-mobile-about">Why Homza</Link><Link href="/login" data-testid="link-mobile-login">Sign in</Link><Link href="/register" data-testid="link-mobile-register" className="text-primary">Create account <ArrowUpRight className="inline" size={14} /></Link></div>
+      <div className="flex flex-col gap-4 text-sm font-bold"><Link href="/properties" data-testid="link-mobile-properties">Find a home</Link><Link href="/about" data-testid="link-mobile-about">Why Homza</Link>{currentUser ? <Link href={currentUser.role === 'owner' ? '/owner' : currentUser.role === 'admin' ? '/admin' : '/dashboard'} data-testid="link-mobile-account">My account</Link> : <><Link href="/login" data-testid="link-mobile-login">Sign in</Link><Link href="/register" data-testid="link-mobile-register" className="text-primary">Create account <ArrowUpRight className="inline" size={14} /></Link></>}</div>
     </div>}
   </header>;
 }
