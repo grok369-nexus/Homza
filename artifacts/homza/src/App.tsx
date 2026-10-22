@@ -431,11 +431,11 @@ function AdminQueue({ title, icon: Icon, count, href, rows }: { title: string; i
 
 function AdminPage({ page }: { page: string }) {
   const labels: Record<string, [string, string, string]> = {
-    users: ['People on Homza', 'Users', 'Accounts registered in the database.'],
+    users: ['People on Homza', 'User & role controls', 'Review account types. Admin access cannot be granted from this screen.'],
     owners: ['People behind the homes', 'Owners', 'Owner accounts and their verification status.'],
-    verification: ['Protect the signal', 'Verification queue', 'Review owner profiles before granting verified status.'],
-    properties: ['Keep quality high', 'Property moderation', 'Approve listings only after a real review.'],
-    reports: ['Listen closely', 'Reports', 'Review reports submitted about property listings.'],
+    verification: ['Protect the signal', 'Owner verification', 'Review owner profiles before granting verified status.'],
+    properties: ['Keep quality high', 'Listing moderation', 'Approve suitable listings, or hide listings that need investigation.'],
+    reports: ['Listen closely', 'Trust & safety reports', 'Track reports submitted about property listings.'],
     payments: ['Follow the trail', 'Payments', 'Payment records will appear after payment integration.'],
     subscriptions: ['Know the base', 'Subscriptions', 'Subscription records will appear after billing is implemented.'],
     archived: ['Keep the history', 'Archived listings', 'Archived listing tools are not active yet.'],
@@ -455,57 +455,58 @@ function AdminPage({ page }: { page: string }) {
     reports: '/api/admin/reports'
   };
 
+  const loadRows = async (activeCheck?: () => boolean) => {
+    if (!endpoint[page]) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(endpoint[page], { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `Could not load records (HTTP ${response.status}).`);
+      const raw: Array<Record<string, unknown>> = page === 'verification'
+        ? (Array.isArray(payload.verificationQueue) ? payload.verificationQueue : [])
+        : Array.isArray(payload) ? payload : [];
+      const mapped = raw.map((row) => {
+        const id = String(row.id || '');
+        if (page === 'users') return { id, primary: String(row.fullName || 'Unnamed user'), secondary: String(row.email || ''), status: String(row.role || 'tenant') };
+        if (page === 'owners') return { id, primary: String(row.fullName || 'Unnamed owner'), secondary: [row.email, row.phone].filter(Boolean).join(' · '), status: String(row.ownerVerificationStatus || 'unverified') };
+        if (page === 'verification') return { id, primary: String(row.owner || 'Owner'), secondary: String(row.phone || ''), status: String(row.status || 'pending') };
+        if (page === 'properties') return { id, primary: String(row.title || 'Untitled listing'), secondary: `${String(row.location || '')} · ${money(Number(row.rent || 0))}`, status: String(row.status || 'pending') };
+        return { id, primary: String(row.propertyTitle || 'Reported listing'), secondary: `${String(row.reason || '')} · ${String(row.location || '')}`, status: String(row.status || 'open') };
+      });
+      if (!activeCheck || activeCheck()) setRows(mapped);
+    } catch (err) {
+      if (!activeCheck || activeCheck()) setError(err instanceof Error ? err.message : 'Could not load these records.');
+    } finally {
+      if (!activeCheck || activeCheck()) setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
-    const load = async () => {
-      setLoading(true);
-      setError('');
-      if (!endpoint[page]) {
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-      try {
-        const response = await fetch(endpoint[page], { credentials: 'same-origin', headers: { Accept: 'application/json' } });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not load these records.');
-        const raw: Array<Record<string, unknown>> = page === 'verification'
-          ? (payload.verificationQueue || [])
-          : Array.isArray(payload) ? payload : [];
-        const mapped = raw.map((row) => {
-          const id = String(row.id || '');
-          if (page === 'users') return { id, primary: String(row.fullName || 'Unnamed user'), secondary: String(row.email || ''), status: String(row.role || 'tenant') };
-          if (page === 'owners') return { id, primary: String(row.fullName || 'Unnamed owner'), secondary: [row.email, row.phone].filter(Boolean).join(' · '), status: String(row.ownerVerificationStatus || 'unverified') };
-          if (page === 'verification') return { id, primary: String(row.owner || 'Owner'), secondary: String(row.phone || ''), status: String(row.status || 'pending') };
-          if (page === 'properties') return { id, primary: String(row.title || 'Untitled listing'), secondary: `${String(row.location || '')} · ${money(Number(row.rent || 0))}`, status: String(row.status || 'pending') };
-          return { id, primary: String(row.propertyTitle || 'Reported listing'), secondary: `${String(row.reason || '')} · ${String(row.location || '')}`, status: String(row.status || 'open') };
-        });
-        if (active) setRows(mapped);
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : 'Could not load these records.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    void load();
+    void loadRows(() => active);
     return () => { active = false; };
   }, [page]);
 
-  const performAction = async (row: { id: string }, action: 'approve' | 'reject' | 'resolve' | 'dismiss') => {
+  const performAction = async (row: { id: string }, action: 'approve' | 'reject' | 'resolve' | 'dismiss' | 'review') => {
     setBusy(row.id);
     setError('');
     setNotice('');
     let url = '';
     let body: Record<string, string> = {};
     if (page === 'verification') {
-      url = `/api/admin/owners/${row.id}/verification`;
-      body = { status: action === 'approve' ? 'verified' : 'rejected' };
+      url = `/api/admin/owners/${encodeURIComponent(row.id)}/verification`;
+      body = { status: action === 'approve' ? 'verified' : action === 'review' ? 'pending' : 'rejected' };
     } else if (page === 'properties') {
-      url = `/api/admin/properties/${row.id}/review`;
-      body = { decision: action };
+      url = `/api/admin/properties/${encodeURIComponent(row.id)}/review`;
+      body = { decision: action === 'approve' ? 'approve' : 'reject' };
     } else if (page === 'reports') {
-      url = `/api/admin/reports/${row.id}`;
-      body = { status: action === 'resolve' ? 'resolved' : 'dismissed' };
+      url = `/api/admin/reports/${encodeURIComponent(row.id)}`;
+      body = { status: action === 'resolve' ? 'resolved' : action === 'dismiss' ? 'dismissed' : 'reviewing' };
     } else {
       setBusy(null);
       return;
@@ -513,7 +514,7 @@ function AdminPage({ page }: { page: string }) {
     try {
       const response = await fetch(url, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Action failed. Please try again.');
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `Action failed (HTTP ${response.status}).`);
       if (page === 'reports') {
         setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: String(payload.status || body.status) } : item));
       } else {
@@ -527,21 +528,43 @@ function AdminPage({ page }: { page: string }) {
     }
   };
 
+  const changeRole = async (row: { id: string; status: string }, role: 'tenant' | 'owner') => {
+    setBusy(row.id);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(row.id)}/role`, {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `Role update failed (HTTP ${response.status}).`);
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: String(payload.role || role) } : item));
+      setNotice(`Role updated to ${role}. Owner accounts must pass verification before listings can be approved.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update this role.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const hasActions = page === 'verification' || page === 'properties' || page === 'reports';
-  return <AppShell role="admin"><PageHeading eyebrow={eyebrow} title={title} copy={copy} action={<Button variant="outline" onClick={() => window.location.reload()}><ArrowRight size={16} /> Refresh</Button>} />
+  return <AppShell role="admin"><PageHeading eyebrow={eyebrow} title={title} copy={copy} action={<Button variant="outline" onClick={() => void loadRows()} disabled={loading}><ArrowRight size={16} /> Refresh records</Button>} />
     <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4"><p className="text-sm font-bold">{loading ? 'Loading records…' : `${rows.length} records`}</p><div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} /> Admin access</div></div>
+      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4"><p className="text-sm font-bold">{loading ? 'Loading records…' : `${rows.length} records`}</p><div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} /> Admin-only controls</div></div>
       {error && <p role="alert" className="m-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
       {notice && <p role="status" className="m-4 rounded-xl bg-primary/5 p-3 text-sm font-semibold text-primary">{notice}</p>}
-      {!loading && !error && rows.length === 0 && <div className="px-5 py-12 text-center"><p className="font-semibold">{endpoint[page] ? 'Nothing needs attention here.' : 'This module is not connected yet.'}</p><p className="mt-2 text-sm text-muted-foreground">{endpoint[page] ? 'Records will appear here when they are created.' : 'We will build this after the core listing and account flows are stable.'}</p></div>}
+      {!loading && !error && rows.length === 0 && <div className="px-5 py-12 text-center"><p className="font-semibold">{endpoint[page] ? 'Nothing needs attention here.' : 'This module is not connected yet.'}</p><p className="mt-2 text-sm text-muted-foreground">{endpoint[page] ? 'Records will appear here when they are created.' : 'Payments and subscriptions will be connected when billing is implemented.'}</p></div>}
       {rows.map((row, index) => <div key={row.id} data-testid={`row-admin-${page}-${index}`} className="grid gap-3 border-b border-border px-5 py-4 last:border-0 md:grid-cols-[1fr_1fr_130px_auto] md:items-center">
         <div><p className="break-words text-sm font-bold">{row.primary}</p><p className="mt-1 text-xs text-muted-foreground md:hidden">{row.secondary}</p></div>
         <p className="break-words text-xs text-muted-foreground md:block">{row.secondary}</p>
         <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('unverified') || row.status.toLowerCase().includes('open') ? 'bg-secondary/50' : 'bg-primary/10 text-primary'}`}>{row.status}</span>
         <div className="flex flex-wrap gap-2 md:justify-end">
-          {hasActions && page === 'verification' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
-          {hasActions && page === 'properties' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide</Button></>}
-          {hasActions && page === 'reports' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
+          {page === 'users' && row.status !== 'admin' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id || row.status === 'owner'} onClick={() => void changeRole(row, 'owner')}>Make owner</Button><Button size="sm" variant="outline" disabled={busy === row.id || row.status === 'tenant'} onClick={() => void changeRole(row, 'tenant')}>Make tenant</Button></>}
+          {hasActions && page === 'verification' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify owner</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'review')}>Return to pending</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
+          {hasActions && page === 'properties' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide listing</Button></>}
+          {hasActions && page === 'reports' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'review')}>Mark reviewing</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
         </div>
       </div>)}
     </div>
