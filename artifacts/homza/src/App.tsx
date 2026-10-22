@@ -515,8 +515,11 @@ function AdminPage({ page }: { page: string }) {
       const response = await fetch(url, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `Action failed (HTTP ${response.status}).`);
-      if (page === 'reports') {
-        setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: String(payload.status || body.status) } : item));
+      if (page === 'reports' || page === 'owners') {
+        setRows((current) => current.map((item) => item.id === row.id ? {
+          ...item,
+          status: page === 'owners' ? String(payload.ownerVerificationStatus || body.status) : String(payload.status || body.status),
+        } : item));
       } else {
         setRows((current) => current.filter((item) => item.id !== row.id));
       }
