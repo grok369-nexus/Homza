@@ -205,7 +205,6 @@ function SearchPage() {
 
 function PropertyDetail() {
   const { id = '' } = useParams<{ id: string }>();
-  const currentUser = useCurrentUser();
   const { data, isLoading, isError, refetch } = useGetProperty(id, { query: { enabled: !!id, queryKey: getGetPropertyQueryKey(id) } });
   const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
   const property = data;
