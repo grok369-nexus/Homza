@@ -119,7 +119,8 @@ function PropertyCard({ property, saved = false, onSaved }: { property: Property
       if (response.status === 401) { navigate('/login'); return; }
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || 'We could not update your saved homes. Please try again.');
+        const detail = typeof body.error === 'string' ? body.error : typeof body.message === 'string' ? body.message : '';
+        throw new Error(detail || `Could not update saved homes (HTTP ${response.status}). Please try again.`);
       }
       await queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
       onSaved?.();
