@@ -103,8 +103,23 @@ function StatusPill({ status, verified }: { status?: string; verified?: boolean 
 function PropertyCard({ property, saved = false, onSaved }: { property: Property; saved?: boolean; onSaved?: () => void }) {
   const add = useAddFavorite();
   const remove = useRemoveFavorite();
+  const [, navigate] = useLocation();
+  const currentUser = useCurrentUser();
   const saving = add.isPending || remove.isPending;
-  const toggle = () => { (saved ? remove : add).mutate({ propertyId: property.id }, { onSuccess: onSaved }); };
+  const toggle = () => {
+    if (!currentUser) { navigate('/login'); return; }
+    const mutation = saved ? remove : add;
+    mutation.mutate({ propertyId: property.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
+        onSaved?.();
+      },
+      onError: (error) => {
+        const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status;
+        if (status === 401) navigate('/login');
+      },
+    });
+  };;
   return <article data-testid={`card-property-${property.id}`} className="lift overflow-hidden rounded-2xl border border-border bg-card">
     <div className="relative aspect-[1.22] overflow-hidden bg-muted">
       <img src={property.image || photos[0]} alt={property.title} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
@@ -191,21 +206,29 @@ function SearchPage() {
 function PropertyDetail() {
   const { id = '' } = useParams<{ id: string }>();
   const { data, isLoading, isError, refetch } = useGetProperty(id, { query: { enabled: !!id, queryKey: getGetPropertyQueryKey(id) } });
+  const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
   const property = data;
   const [saved, setSaved] = useState(false);
+  useEffect(() => { setSaved(Boolean(property && favoriteData?.some((item) => item.id === property.id)); }, [property?.id, favoriteData]);
   const [contacted, setContacted] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const favoriteAdd = useAddFavorite();
   const favoriteRemove = useRemoveFavorite();
   const report = useReportProperty();
   const submitReport = () => { report.mutate({ data: { propertyId: id, reason: 'Listing details need checking' } }, { onSuccess: () => setReportOpen(false) }); };
+  const [, navigate] = useLocation();
   const toggleSaved = () => {
     if (!property) return;
+    const currentUser = (queryClient.getQueryData(['current-user']) as { id?: string } | undefined);
     const mutation = saved ? favoriteRemove : favoriteAdd;
     mutation.mutate({ propertyId: property.id }, {
       onSuccess: () => {
-        setSaved((value) => !value);
+        setSaved(!saved);
         queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
+      },
+      onError: (error) => {
+        const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || !currentUser) navigate('/login');
       },
     });
   };
