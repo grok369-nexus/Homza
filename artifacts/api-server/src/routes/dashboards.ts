@@ -159,12 +159,13 @@ router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (
     if (target.role === "admin") {
       return res.status(409).json({ error: "Administrator roles cannot be changed from this screen." });
     }
+    if (target.role === role) {
+      return res.status(409).json({ error: "This user already has that role." });
+    }
     const [updated] = await db.update(users)
       .set({
         role,
-        ownerVerificationStatus: role === "owner"
-          ? (target.role === "owner" ? undefined : "pending")
-          : "unverified",
+        ownerVerificationStatus: role === "owner" ? "pending" : "unverified",
       })
       .where(eq(users.id, id))
       .returning({ id: users.id, fullName: users.fullName, email: users.email, role: users.role, ownerVerificationStatus: users.ownerVerificationStatus });
