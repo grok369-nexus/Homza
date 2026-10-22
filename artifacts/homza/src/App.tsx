@@ -101,30 +101,39 @@ function StatusPill({ status, verified }: { status?: string; verified?: boolean 
 }
 
 function PropertyCard({ property, saved = false, onSaved }: { property: Property; saved?: boolean; onSaved?: () => void }) {
-  const add = useAddFavorite();
-  const remove = useRemoveFavorite();
   const [, navigate] = useLocation();
   const currentUser = useCurrentUser();
-  const saving = add.isPending || remove.isPending;
-  const toggle = () => {
+  const [saving, setSaving] = useState(false);
+  const [favoriteError, setFavoriteError] = useState('');
+  const toggle = async () => {
     if (!currentUser) { navigate('/login'); return; }
-    const mutation = saved ? remove : add;
-    mutation.mutate({ propertyId: property.id }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
-        onSaved?.();
-      },
-      onError: (error) => {
-        const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status;
-        if (status === 401) navigate('/login');
-      },
-    });
+    if (saving) return;
+    setSaving(true);
+    setFavoriteError('');
+    try {
+      const response = await fetch(`/api/favorites/${encodeURIComponent(property.id)}`, {
+        method: saved ? 'DELETE' : 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      if (response.status === 401) { navigate('/login'); return; }
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'We could not update your saved homes. Please try again.');
+      }
+      await queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
+      onSaved?.();
+    } catch (error) {
+      setFavoriteError(error instanceof Error ? error.message : 'We could not update your saved homes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };;
   return <article data-testid={`card-property-${property.id}`} className="lift overflow-hidden rounded-2xl border border-border bg-card">
     <div className="relative aspect-[1.22] overflow-hidden bg-muted">
       <img src={property.image || photos[0]} alt={property.title} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
       <div className="absolute left-3 top-3"><StatusPill verified={property.verified} status={property.status} /></div>
-      <button onClick={toggle} disabled={saving} aria-label={saved ? 'Remove saved home' : 'Save home'} data-testid={`button-save-property-${property.id}`} className={`focus-ring absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full backdrop-blur transition ${saved ? 'bg-secondary text-foreground' : 'bg-card/90 text-foreground hover:bg-secondary'}`}>{saving ? <LoaderCircle className="animate-spin" size={16} /> : <Heart size={17} fill={saved ? 'currentColor' : 'none'} />}</button>
+      <button onClick={toggle} disabled={saving} aria-label={saved ? 'Remove saved home' : 'Save home'} aria-pressed={saved} data-testid={`button-save-property-${property.id}`} className={`focus-ring absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full backdrop-blur transition ${saved ? 'bg-secondary text-foreground' : 'bg-card/90 text-foreground hover:bg-secondary'}`}>{saving ? <LoaderCircle className="animate-spin" size={16} /> : <Heart size={17} fill={saved ? 'currentColor' : 'none'} />}</button>{favoriteError && <p role="alert" className="absolute left-3 right-14 top-3 rounded-lg bg-card px-2 py-1 text-xs text-destructive">{favoriteError}</p>}
     </div>
     <div className="p-4">
       <div className="flex items-start justify-between gap-2"><div><p className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground"><MapPin size={12} className="text-accent" /> {property.location}</p><h3 className="font-display text-[17px] font-bold leading-tight">{property.title}</h3></div><ArrowUpRight size={17} className="mt-1 shrink-0 text-muted-foreground" /></div>
@@ -214,24 +223,34 @@ function PropertyDetail() {
   useEffect(() => { setSaved(Boolean(property && favoriteData?.some((item) => item.id === property.id))); }, [property?.id, favoriteData]);
   const [contacted, setContacted] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const favoriteAdd = useAddFavorite();
-  const favoriteRemove = useRemoveFavorite();
+  const [savingFavorite, setSavingFavorite] = useState(false);
+  const [favoriteError, setFavoriteError] = useState('');
   const report = useReportProperty();
   const submitReport = () => { report.mutate({ data: { propertyId: id, reason: 'Listing details need checking' } }, { onSuccess: () => setReportOpen(false) }); };
   const [, navigate] = useLocation();
-  const toggleSaved = () => {
-    if (!property) return;
-    const mutation = saved ? favoriteRemove : favoriteAdd;
-    mutation.mutate({ propertyId: property.id }, {
-      onSuccess: () => {
-        setSaved(!saved);
-        queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
-      },
-      onError: (error) => {
-        const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status;
-        if (status === 401) navigate('/login');
-      },
-    });
+  const toggleSaved = async () => {
+    if (!property || savingFavorite) return;
+    if (!currentUser) { navigate('/login'); return; }
+    setSavingFavorite(true);
+    setFavoriteError('');
+    try {
+      const response = await fetch(`/api/favorites/${encodeURIComponent(property.id)}`, {
+        method: saved ? 'DELETE' : 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      if (response.status === 401) { navigate('/login'); return; }
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'We could not update your saved homes. Please try again.');
+      }
+      setSaved(!saved);
+      await queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
+    } catch (error) {
+      setFavoriteError(error instanceof Error ? error.message : 'We could not update your saved homes. Please try again.');
+    } finally {
+      setSavingFavorite(false);
+    }
   };
   if (isLoading && !property) return <><PublicHeader /><main className='mx-auto max-w-7xl px-5 py-12'><div className='skeleton h-96 rounded-3xl' /></main></>;
   if (!property) return <><PublicHeader /><main className='mx-auto max-w-7xl px-5 py-12 text-sm text-muted-foreground'>This listing is unavailable or has been removed.</main><Footer /></>;
