@@ -146,8 +146,9 @@ function QueryState({ loading, error, retry, children }: { loading: boolean; err
 }
 
 function Home() {
+  const currentUser = useCurrentUser();
   const { data, isLoading, isError, refetch } = useListProperties({ sort: 'recommended' });
-  const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
+  const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey(), enabled: Boolean(currentUser) } });
   const properties = data ?? [];
   const savedIds = useMemo(() => new Set((favoriteData ?? []).map((property) => property.id)), [favoriteData]);
   return <><PublicHeader /><main>
@@ -205,8 +206,9 @@ function SearchPage() {
 
 function PropertyDetail() {
   const { id = '' } = useParams<{ id: string }>();
+  const currentUser = useCurrentUser();
   const { data, isLoading, isError, refetch } = useGetProperty(id, { query: { enabled: !!id, queryKey: getGetPropertyQueryKey(id) } });
-  const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
+  const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey(), enabled: Boolean(currentUser) } });
   const property = data;
   const [saved, setSaved] = useState(false);
   useEffect(() => { setSaved(Boolean(property && favoriteData?.some((item) => item.id === property.id))); }, [property?.id, favoriteData]);
@@ -281,10 +283,12 @@ function Dashboard() {
 }
 
 function SavedPage() {
-  const { data, isLoading, isError, refetch } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
+  const [, navigate] = useLocation();
+  const currentUser = useCurrentUser();
+  const { data, isLoading, isError, refetch } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey(), enabled: Boolean(currentUser) } });
   const properties = data ?? [];
   const removeFavorite = () => queryClient.invalidateQueries({ queryKey: getListFavoritesQueryKey() });
-  return <AppShell role="tenant"><PageHeading eyebrow="Your shortlist" title="Saved homes" copy="The homes you did not want to lose." action={<Link href="/properties" data-testid="link-saved-find-more" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground">Find more <Search size={16} /></Link>} /><div className="mt-8"><QueryState loading={isLoading} error={isError} retry={() => refetch()}><PropertyGrid properties={properties} empty="You haven't saved any properties yet. Start with a few homes that feel promising." savedIds={new Set(properties.map((property) => property.id))} onFavoriteChanged={removeFavorite} /></QueryState></div></AppShell>;
+  return <AppShell role="tenant"><PageHeading eyebrow="Your shortlist" title="Saved homes" copy="The homes you did not want to lose." action={<Link href="/properties" data-testid="link-saved-find-more" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground">Find more <Search size={16} /></Link>} /><div className="mt-8">{!currentUser ? <div className="rounded-2xl border border-border bg-card p-8 text-center"><Heart className="mx-auto text-primary" size={28} /><h2 className="mt-3 font-display text-xl font-bold">Sign in to see your saved homes</h2><p className="mt-2 text-sm text-muted-foreground">Your shortlist is saved to your Homza account and follows you between devices.</p><Button onClick={() => navigate('/login')} className="mt-5"><LogIn size={16} /> Sign in</Button></div> : <QueryState loading={isLoading} error={isError} retry={() => refetch()}><PropertyGrid properties={properties} empty="You haven't saved any properties yet. Start with a few homes that feel promising." savedIds={new Set(properties.map((property) => property.id))} onFavoriteChanged={removeFavorite} /></QueryState>}</div></AppShell>;
 }
 
 function SearchesPage() {
