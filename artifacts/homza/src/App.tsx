@@ -498,7 +498,7 @@ function AdminPage({ page }: { page: string }) {
     setNotice('');
     let url = '';
     let body: Record<string, string> = {};
-    if (page === 'verification') {
+    if (page === 'verification' || page === 'owners') {
       url = `/api/admin/owners/${encodeURIComponent(row.id)}/verification`;
       body = { status: action === 'approve' ? 'verified' : action === 'review' ? 'pending' : 'rejected' };
     } else if (page === 'properties') {
@@ -549,7 +549,7 @@ function AdminPage({ page }: { page: string }) {
     }
   };
 
-  const hasActions = page === 'verification' || page === 'properties' || page === 'reports';
+  const hasActions = page === 'verification' || page === 'owners' || page === 'properties' || page === 'reports';
   return <AppShell role="admin"><PageHeading eyebrow={eyebrow} title={title} copy={copy} action={<Button variant="outline" onClick={() => void loadRows()} disabled={loading}><ArrowRight size={16} /> Refresh records</Button>} />
     <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4"><p className="text-sm font-bold">{loading ? 'Loading records…' : `${rows.length} records`}</p><div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} /> Admin-only controls</div></div>
@@ -562,7 +562,7 @@ function AdminPage({ page }: { page: string }) {
         <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('unverified') || row.status.toLowerCase().includes('open') ? 'bg-secondary/50' : 'bg-primary/10 text-primary'}`}>{row.status}</span>
         <div className="flex flex-wrap gap-2 md:justify-end">
           {page === 'users' && row.status !== 'admin' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id || row.status === 'owner'} onClick={() => void changeRole(row, 'owner')}>Make owner</Button><Button size="sm" variant="outline" disabled={busy === row.id || row.status === 'tenant'} onClick={() => void changeRole(row, 'tenant')}>Make tenant</Button></>}
-          {hasActions && page === 'verification' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify owner</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'review')}>Return to pending</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
+          {hasActions && (page === 'verification' || page === 'owners') && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Verify owner</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'review')}>Return to pending</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Reject</Button></>}
           {hasActions && page === 'properties' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'approve')}>Approve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'reject')}>Hide listing</Button></>}
           {hasActions && page === 'reports' && <><Button className="px-3 py-2 text-xs" disabled={busy === row.id} onClick={() => void performAction(row, 'review')}>Mark reviewing</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'resolve')}>Resolve</Button><Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => void performAction(row, 'dismiss')}>Dismiss</Button></>}
         </div>
