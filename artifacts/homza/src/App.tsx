@@ -205,6 +205,7 @@ function SearchPage() {
 
 function PropertyDetail() {
   const { id = '' } = useParams<{ id: string }>();
+  const currentUser = useCurrentUser();
   const { data, isLoading, isError, refetch } = useGetProperty(id, { query: { enabled: !!id, queryKey: getGetPropertyQueryKey(id) } });
   const { data: favoriteData } = useListFavorites({ query: { queryKey: getListFavoritesQueryKey() } });
   const property = data;
@@ -219,7 +220,6 @@ function PropertyDetail() {
   const [, navigate] = useLocation();
   const toggleSaved = () => {
     if (!property) return;
-    const currentUser = (queryClient.getQueryData(['current-user']) as { id?: string } | undefined);
     const mutation = saved ? favoriteRemove : favoriteAdd;
     mutation.mutate({ propertyId: property.id }, {
       onSuccess: () => {
@@ -228,7 +228,7 @@ function PropertyDetail() {
       },
       onError: (error) => {
         const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status;
-        if (status === 401 || !currentUser) navigate('/login');
+        if (status === 401) navigate('/login');
       },
     });
   };
