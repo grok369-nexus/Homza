@@ -1,0 +1,44 @@
+name: One-time test account password reset
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_reset:
+        description: "Actually reset the six test accounts (unchecked = dry run)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  reset-test-accounts:
+    if: github.ref == 'refs/heads/chore/one-time-test-account-password-reset'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out reset branch
+        uses: actions/checkout@v4
+        with:
+          ref: chore/one-time-test-account-password-reset
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run guarded reset script
+        working-directory: scripts
+        env:
+          SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
+          HOMZA_TEST_RESET_PASSWORD: ${{ secrets.HOMZA_TEST_RESET_PASSWORD }}
+          HOMZA_TEST_RESET_CONFIRM: ${{ inputs.apply_reset && 'RESET_THE_SIX_TEST_ACCOUNTS' || '' }}
+        run: pnpm exec tsx src/reset-test-account-passwords.ts
