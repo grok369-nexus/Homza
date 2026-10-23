@@ -183,9 +183,10 @@ router.post("/auth/forgot-password", async (req, res, next) => {
     if (user && token) {
       const resetUrl = new URL("/reset-password", publicUrl);
       resetUrl.searchParams.set("token", token);
-      const safeName = user.fullName.replace(/[&<>"']/g, (character) => ({
+      const htmlEscapes: Record<string, string> = {
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-      })[character] ?? character);
+      };
+      const safeName = user.fullName.replace(/[&<>"']/g, (character) => htmlEscapes[character] ?? character);
       const emailResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -202,7 +203,8 @@ router.post("/auth/forgot-password", async (req, res, next) => {
         await db.update(passwordResetTokens).set({ usedAt: new Date() })
           .where(eq(passwordResetTokens.tokenHash, hashToken(token)));
         logger.error({ action: "forgot-password", providerStatus: emailResponse.status }, "Password reset email delivery failed");
-        return res.status(503).json({ error: "We could not send a reset email right now. Please try again later." });
+        // Keep the response identical for known and unknown accounts to avoid email enumeration.
+        return res.status(202).json({ message: RESET_CONFIRMATION });
       }
     }
 
