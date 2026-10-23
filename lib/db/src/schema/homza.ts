@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  index,
   jsonb,
   pgEnum,
   pgTable,
@@ -96,3 +97,18 @@ export const contactMessages = pgTable("homza_contact_messages", {
 export type HomzaUser = typeof users.$inferSelect;
 export type NewHomzaUser = typeof users.$inferInsert;
 export type HomzaPropertyRow = typeof properties.$inferSelect;
+
+
+export const passwordResetTokens = pgTable("homza_password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").unique(),
+  requesterHash: text("requester_hash").notNull(),
+  emailHash: text("email_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("homza_password_reset_requester_created_idx").on(table.requesterHash, table.createdAt),
+  index("homza_password_reset_email_created_idx").on(table.emailHash, table.createdAt),
+]);
