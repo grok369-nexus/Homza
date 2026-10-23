@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { and, count, eq, gte, gt, isNull } from "drizzle-orm";
+import { and, count, eq, gte, gt, isNull, lt } from "drizzle-orm";
 import { db, passwordResetTokens, sessions, users } from "@workspace/db";
 import { logger } from "../lib/logger";
 import {
@@ -154,6 +154,8 @@ router.post("/auth/forgot-password", async (req, res, next) => {
     }
 
     const now = Date.now();
+    // Keep rate-limit metadata bounded; no reset request needs to be retained beyond 30 days.
+    await db.delete(passwordResetTokens).where(lt(passwordResetTokens.createdAt, new Date(now - 30 * 24 * 60 * 60 * 1000)));
     const cutoff = new Date(now - RESET_RATE_WINDOW_MS);
     const requesterHash = hashToken(req.ip || "unknown-requester");
     const emailHash = hashToken(email);
