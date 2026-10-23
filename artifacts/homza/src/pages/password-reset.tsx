@@ -6,7 +6,7 @@ const inputClass = "mt-2 w-full rounded-xl border border-input bg-card px-4 py-3
 const buttonClass = "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function PasswordResetPage() {
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   const isReset = location === "/reset-password";
   const token = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") ?? "" : "";
   const [email, setEmail] = useState("");
