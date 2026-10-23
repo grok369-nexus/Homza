@@ -14,11 +14,10 @@ permissions:
 
 jobs:
   reset-test-accounts:
-    if: github.ref == 'refs/heads/chore/one-time-test-account-password-reset'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check out reset branch
+      - name: Check out reset script branch
         uses: actions/checkout@v4
         with:
           ref: chore/one-time-test-account-password-reset
