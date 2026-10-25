@@ -642,6 +642,79 @@ function Auth({ register = false }: { register?: boolean }) {
 
 function AppRouter() {
   const [location, navigate] = useLocation();
+
+  // Keep metadata aligned with the current client-side route. Google can render
+  // JavaScript, but route-specific titles and descriptions help it understand
+  // each public page instead of treating every URL as the same document.
+  useEffect(() => {
+    const path = window.location.pathname.replace(/\\/+$/, '') || '/';
+    const isPropertyDetail = /^\\/properties\\/[^/]+$/.test(path);
+    const privateRoute = /^\\/(login|register|dashboard|owner|admin)(?:\\/|$)/.test(path);
+    const routes: Record<string, { title: string; description: string }> = {
+      '/': {
+        title: 'Homza Uganda | Find a Home to Rent',
+        description: 'Find homes to rent in Kampala, Wakiso, Entebbe and across Uganda with Homza. Compare property details and connect with property owners.',
+      },
+      '/properties': {
+        title: 'Homes for Rent in Uganda | Homza',
+        description: 'Browse homes and rental properties in Kampala, Wakiso, Entebbe and across Uganda. Compare rent, locations, bedrooms and property details.',
+      },
+      '/search': {
+        title: 'Search Rental Homes in Uganda | Homza',
+        description: 'Search homes for rent by neighbourhood, district and budget across Kampala and other parts of Uganda.',
+      },
+      '/about': {
+        title: 'About Homza | A Clearer Way to Find a Home',
+        description: 'Learn how Homza helps people in Uganda discover rental homes with clearer property details and ways to contact owners.',
+      },
+      '/contact': {
+        title: 'Contact Homza | Help with Homes and Listings',
+        description: 'Contact the Homza team for help finding a home, listing a property or reporting a concern in Uganda.',
+      },
+    };
+    const metadata = routes[path] ?? (isPropertyDetail
+      ? {
+          title: 'Rental Property Details | Homza Uganda',
+          description: 'Explore this rental property on Homza. Review its location, rent and available details, then contact the property owner.',
+        }
+      : {
+          title: 'Homza Uganda | Find a Home to Rent',
+          description: 'Find homes to rent across Uganda with Homza.',
+        });
+
+    document.title = metadata.title;
+    const setMeta = (selector: string, attribute: string, value: string) => {
+      let element = document.head.querySelector(selector) as HTMLMetaElement | null;
+      if (!element) {
+        element = document.createElement('meta');
+        if (selector.startsWith('meta[name=')) element.name = selector.match(/name="([^"]+)"/)?.[1] ?? '';
+        else element.setAttribute('property', selector.match(/property="([^"]+)"/)?.[1] ?? '');
+        document.head.appendChild(element);
+      }
+      element.setAttribute(attribute, value);
+    };
+    setMeta('meta[name="description"]', 'content', metadata.description);
+    setMeta('meta[property="og:title"]', 'content', metadata.title);
+    setMeta('meta[property="og:description"]', 'content', metadata.description);
+    setMeta('meta[name="twitter:title"]', 'content', metadata.title);
+    setMeta('meta[name="twitter:description"]', 'content', metadata.description);
+
+    let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `https://homza-chi.vercel.app${path}`;
+
+    let robots = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.name = 'robots';
+      document.head.appendChild(robots);
+    }
+    robots.content = privateRoute ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
+  }, [location]);
   const protectedRole = location.startsWith('/admin') ? 'admin' : location.startsWith('/owner') ? 'owner' : location.startsWith('/dashboard') ? 'tenant' : null;
   const [checkingAccess, setCheckingAccess] = useState(() => Boolean(
     window.location.pathname.startsWith('/admin') ||
