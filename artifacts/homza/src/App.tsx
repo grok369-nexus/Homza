@@ -647,9 +647,9 @@ function AppRouter() {
   // JavaScript, but route-specific titles and descriptions help it understand
   // each public page instead of treating every URL as the same document.
   useEffect(() => {
-    const path = window.location.pathname.replace(/\\/+$/, '') || '/';
-    const isPropertyDetail = /^\\/properties\\/[^/]+$/.test(path);
-    const privateRoute = /^\\/(login|register|dashboard|owner|admin)(?:\\/|$)/.test(path);
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    const isPropertyDetail = /^\/properties\/[^/]+$/.test(path);
+    const privateRoute = /^\/(login|register|dashboard|owner|admin)(?:\/|$)/.test(path);
     const routes: Record<string, { title: string; description: string }> = {
       '/': {
         title: 'Homza Uganda | Find a Home to Rent',
