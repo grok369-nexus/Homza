@@ -1,6 +1,6 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { db, favorites, properties, reports, savedSearches, users } from "@workspace/db";
+import { db, favorites, properties, propertyViews, reports, savedSearches, users } from "@workspace/db";
 import { requireAuth, requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -68,14 +68,31 @@ router.get("/dashboard/tenant", requireAuth, requireRole("tenant"), async (req, 
 
 router.get("/dashboard/owner", requireAuth, requireRole("owner"), async (req, res, next) => {
   try {
-    const rows = await db.select().from(properties).where(eq(properties.ownerId, req.homzaUser!.id)).orderBy(desc(properties.createdAt));
+    const ownerId = req.homzaUser!.id;
+    const rows = await db.select().from(properties).where(eq(properties.ownerId, ownerId)).orderBy(desc(properties.createdAt));
+    const now = new Date();
+    const firstMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+    const groupedViews = await db.select({
+      month: sql<string>`to_char(date_trunc('month', ${propertyViews.viewedAt}), 'YYYY-MM')`,
+      value: count(),
+    }).from(propertyViews)
+      .innerJoin(properties, eq(propertyViews.propertyId, properties.id))
+      .where(and(eq(properties.ownerId, ownerId), gte(propertyViews.viewedAt, firstMonth)))
+      .groupBy(sql`date_trunc('month', ${propertyViews.viewedAt})`);
+    const viewsByMonth = new Map(groupedViews.map((item) => [item.month, item.value]));
+    const monthlyViews = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + index, 1));
+      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+      return { label: date.toLocaleDateString("en", { month: "short", timeZone: "UTC" }), value: viewsByMonth.get(key) ?? 0 };
+    });
     return res.json({
       totalProperties: rows.length,
       activeListings: rows.filter((property) => property.status === "available").length,
       totalViews: rows.reduce((sum, property) => sum + property.views, 0),
       leads: rows.reduce((sum, property) => sum + property.leads, 0),
-      weeklyViews: [],
-      properties: await listedProperties(eq(properties.ownerId, req.homzaUser!.id)),
+      weeklyViews: monthlyViews,
+      monthlyViews,
+      properties: await listedProperties(eq(properties.ownerId, ownerId)),
       activity: [],
     });
   } catch (error) {
