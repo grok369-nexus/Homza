@@ -415,12 +415,15 @@ router.post("/properties/:id/leads", requireAuth, requireRole("tenant"), async (
       .from(properties).where(and(eq(properties.id, id), eq(properties.status, "available"))).limit(1);
     if (!property) return res.status(404).json({ error: "This listing is no longer available." });
     if (property.ownerId === req.homzaUser!.id) return res.status(400).json({ error: "You cannot enquire about your own listing." });
-    const [lead] = await db.insert(propertyLeads).values({
-      propertyId: property.id,
-      tenantId: req.homzaUser!.id,
-      message,
-    }).returning({ id: propertyLeads.id, createdAt: propertyLeads.createdAt });
-    await db.update(properties).set({ leads: sql`${properties.leads} + 1` }).where(eq(properties.id, property.id));
+    const lead = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(propertyLeads).values({
+        propertyId: property.id,
+        tenantId: req.homzaUser!.id,
+        message,
+      }).returning({ id: propertyLeads.id, createdAt: propertyLeads.createdAt });
+      await tx.update(properties).set({ leads: sql`${properties.leads} + 1` }).where(eq(properties.id, property.id));
+      return created;
+    });
     return res.status(201).json({ id: lead.id, createdAt: lead.createdAt.toISOString(), status: "new" });
   } catch (error) {
     return next(error);
