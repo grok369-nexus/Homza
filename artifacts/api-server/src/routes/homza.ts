@@ -10,7 +10,7 @@ import {
   SubmitContactMessageBody,
   UpdatePropertyBody,
 } from "@workspace/api-zod";
-import { db, favorites, properties, propertyViews, reports, savedSearches, users, contactMessages } from "@workspace/db";
+import { db, favorites, properties, propertyViews, propertyLeads, reports, savedSearches, users, contactMessages } from "@workspace/db";
 import { optionalAuth, requireAuth, requireRole } from "../lib/auth";
 import { logger } from "../lib/logger";
 
@@ -375,7 +375,57 @@ router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), async (req
   }
 });
 
-router.get("/owner/leads", requireAuth, requireRole("owner", "admin"), (_req, res) => res.json([]));
+router.get("/owner/leads", requireAuth, requireRole("owner", "admin"), async (req, res, next) => {
+  try {
+    const rows = await db.select({
+      id: propertyLeads.id,
+      name: users.fullName,
+      email: users.email,
+      phone: users.phone,
+      property: properties.title,
+      propertyId: properties.id,
+      message: propertyLeads.message,
+      status: propertyLeads.status,
+      createdAt: propertyLeads.createdAt,
+    }).from(propertyLeads)
+      .innerJoin(properties, eq(propertyLeads.propertyId, properties.id))
+      .innerJoin(users, eq(propertyLeads.tenantId, users.id))
+      .where(req.homzaUser!.role === "admin" ? undefined : eq(properties.ownerId, req.homzaUser!.id))
+      .orderBy(desc(propertyLeads.createdAt))
+      .limit(200);
+    return res.json(rows.map((row) => ({
+      ...row,
+      phone: row.phone ?? "",
+      createdAt: row.createdAt.toISOString(),
+    })));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/properties/:id/leads", requireAuth, requireRole("tenant"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+    if (!isUuid(id)) return res.status(404).json({ error: "Property not found" });
+    if (message.length < 10 || message.length > 2000) {
+      return res.status(400).json({ error: "Please write a message between 10 and 2,000 characters." });
+    }
+    const [property] = await db.select({ id: properties.id, ownerId: properties.ownerId, status: properties.status })
+      .from(properties).where(and(eq(properties.id, id), eq(properties.status, "available"))).limit(1);
+    if (!property) return res.status(404).json({ error: "This listing is no longer available." });
+    if (property.ownerId === req.homzaUser!.id) return res.status(400).json({ error: "You cannot enquire about your own listing." });
+    const [lead] = await db.insert(propertyLeads).values({
+      propertyId: property.id,
+      tenantId: req.homzaUser!.id,
+      message,
+    }).returning({ id: propertyLeads.id, createdAt: propertyLeads.createdAt });
+    await db.update(properties).set({ leads: sql`${properties.leads} + 1` }).where(eq(properties.id, property.id));
+    return res.status(201).json({ id: lead.id, createdAt: lead.createdAt.toISOString(), status: "new" });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 router.post("/reports", optionalAuth, async (req, res, next) => {
   try {
