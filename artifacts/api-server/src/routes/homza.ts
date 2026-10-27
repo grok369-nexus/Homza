@@ -10,7 +10,7 @@ import {
   SubmitContactMessageBody,
   UpdatePropertyBody,
 } from "@workspace/api-zod";
-import { db, favorites, properties, reports, savedSearches, users, contactMessages } from "@workspace/db";
+import { db, favorites, properties, propertyViews, reports, savedSearches, users, contactMessages } from "@workspace/db";
 import { optionalAuth, requireAuth, requireRole } from "../lib/auth";
 import { logger } from "../lib/logger";
 
@@ -151,8 +151,13 @@ router.get("/properties/:id", optionalAuth, async (req, res, next) => {
       return res.status(404).json({ error: "Property not found" });
     }
     if (record.property.status === "available") {
+      // Preserve the existing cumulative counter while recording trustworthy
+      // time-series events for public/tenant traffic (not owner/admin previews).
       await db.update(properties).set({ views: sql`${properties.views} + 1` }).where(eq(properties.id, record.property.id));
       record.property.views += 1;
+      if (req.homzaUser?.id !== record.property.ownerId && req.homzaUser?.role !== "admin") {
+        await db.insert(propertyViews).values({ propertyId: record.property.id });
+      }
     }
     return res.json(toPropertyDto(record.property, record.owner));
   } catch (error) {
