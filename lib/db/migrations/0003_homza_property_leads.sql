@@ -13,3 +13,7 @@ CREATE INDEX IF NOT EXISTS homza_property_leads_property_created_at_idx
 
 CREATE INDEX IF NOT EXISTS homza_property_leads_tenant_created_at_idx
   ON homza_property_leads (tenant_id, created_at DESC);
+
+-- Access is mediated by the Homza API's authenticated, owner-scoped endpoints.
+-- Direct Supabase Data API access is blocked unless explicit policies are added.
+ALTER TABLE homza_property_leads ENABLE ROW LEVEL SECURITY;
