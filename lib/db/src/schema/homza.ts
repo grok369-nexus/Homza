@@ -108,6 +108,27 @@ export const contactMessages = pgTable("homza_contact_messages", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+
+
+export const messageConversations = pgTable("homza_message_conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastTenantReadAt: timestamp("last_tenant_read_at", { withTimezone: true }),
+  lastOwnerReadAt: timestamp("last_owner_read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const directMessages = pgTable("homza_direct_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id").notNull().references(() => messageConversations.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type HomzaUser = typeof users.$inferSelect;
 export type NewHomzaUser = typeof users.$inferInsert;
 export type HomzaPropertyRow = typeof properties.$inferSelect;
