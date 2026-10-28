@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Router, type IRouter } from "express";
 import { db, directMessages, messageConversations, properties, users } from "@workspace/db";
