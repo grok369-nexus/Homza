@@ -362,21 +362,112 @@ function MessagesPage({ owner = false }: { owner?: boolean }) {
 }
 
 function InteractiveMessagesPage({ owner = false }: { owner?: boolean }) {
-  const messages = owner
-    ? [{ name: 'Sarah Nakato', subject: 'Viewing request · Sunlit bungalow', time: '10:42' }, { name: 'Daniel O.', subject: 'Question about parking', time: 'Yesterday' }]
-    : [{ name: 'Amina N.', subject: 'Re: Quiet two-bedroom near the lake', time: '09:18' }, { name: 'Homza team', subject: 'Your saved search found 2 new homes', time: 'Mon' }];
-  const [selected, setSelected] = useState(0);
+  type Conversation = { id: string; propertyId: string; propertyTitle: string; propertyImage?: string | null; otherParticipantName: string; latestMessage: { body: string; createdAt: string; senderId: string } | null; unread: boolean };
+  type ChatMessage = { id: string; senderId: string; body: string; createdAt: string };
+  const currentUser = useCurrentUser();
+  const [, navigate] = useLocation();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [sent, setSent] = useState<string[]>([]);
-  const active = messages[selected] || messages[0];
-  const send = (event: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const selected = conversations.find((item) => item.id === selectedId) || null;
+
+  const loadConversations = async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const response = await fetch('/api/messages/conversations', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const payload = await response.json().catch(() => []);
+      if (response.status === 401) { navigate('/login'); return; }
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not load messages.');
+      const rows = Array.isArray(payload) ? payload as Conversation[] : [];
+      setConversations(rows);
+      setSelectedId((current) => current && rows.some((row) => row.id === current) ? current : rows[0]?.id || '');
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load messages.');
+    } finally { if (!quiet) setLoading(false); }
+  };
+
+  const loadMessages = async (id: string, quiet = false) => {
+    try {
+      const response = await fetch(`/api/messages/conversations/${encodeURIComponent(id)}/messages`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not load this conversation.');
+      setMessages(Array.isArray(payload.messages) ? payload.messages as ChatMessage[] : []);
+      if (!quiet) setError('');
+      setConversations((current) => current.map((row) => row.id === id ? { ...row, unread: false } : row));
+    } catch (err) { if (!quiet) setError(err instanceof Error ? err.message : 'Could not load this conversation.'); }
+  };
+
+  useEffect(() => {
+    if (!currentUser) { navigate('/login'); return; }
+    if ((owner && currentUser.role !== 'owner') || (!owner && currentUser.role !== 'tenant')) {
+      navigate(currentUser.role === 'owner' ? '/owner/messages' : '/dashboard/messages');
+      return;
+    }
+    void loadConversations();
+    const timer = window.setInterval(() => { void loadConversations(true); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [currentUser?.id, currentUser?.role, owner]);
+
+  useEffect(() => {
+    if (!selectedId) { setMessages([]); return; }
+    void loadMessages(selectedId);
+    const timer = window.setInterval(() => { void loadMessages(selectedId, true); }, 8000);
+    return () => window.clearInterval(timer);
+  }, [selectedId]);
+
+  useEffect(() => {
+    const box = document.getElementById('homza-chat-messages');
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [messages]);
+
+  const send = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = draft.trim();
-    if (!text) return;
-    setSent((items) => [...items, text]);
-    setDraft('');
+    if (!text || !selectedId || sending) return;
+    setSending(true); setError(''); setNotice('');
+    try {
+      const response = await fetch(`/api/messages/conversations/${encodeURIComponent(selectedId)}/messages`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Message could not be sent.');
+      setDraft('');
+      await Promise.all([loadMessages(selectedId, true), loadConversations(true)]);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Message could not be sent.'); }
+    finally { setSending(false); }
   };
-  return <AppShell role={owner ? 'owner' : 'tenant'}><PageHeading eyebrow="Keep it human" title="Messages" copy={owner ? 'Conversations that could become keys.' : 'Your conversations, without the hunt.'} /><div className="mt-8 grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[.75fr_1.25fr]"><div className="border-b border-border lg:border-b-0 lg:border-r">{messages.map((message, index) => <button key={message.name} onClick={() => setSelected(index)} data-testid={`button-message-${index}`} className={`flex w-full items-start gap-3 border-b border-border p-5 text-left transition hover:bg-muted ${selected === index ? 'bg-muted/55' : ''}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold">{initials(message.name)}</span><span className="min-w-0 flex-1"><span className="flex justify-between gap-3 text-sm font-bold"><span className="truncate">{message.name}</span><span className="text-[11px] text-muted-foreground">{message.time}</span></span><span className="mt-1 block truncate text-xs text-muted-foreground">{message.subject}</span></span></button>)}</div><div className="flex min-h-[390px] flex-col"><div className="flex items-center gap-3 border-b border-border p-5"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold">{initials(active.name)}</span><div><p className="text-sm font-bold">{active.name}</p><p className="text-xs text-muted-foreground">Usually replies within a day</p></div></div><div className="flex flex-1 flex-col justify-end gap-3 p-5"><div className="max-w-sm rounded-2xl rounded-bl-sm bg-muted p-3 text-sm leading-6">Hi Akol, thanks for reaching out. Would Saturday morning work for a viewing?</div><div className="max-w-sm self-end rounded-2xl rounded-br-sm bg-primary p-3 text-sm leading-6 text-primary-foreground">Saturday works well. I’ll be there at 10am.</div>{sent.map((text, index) => <div key={`${text}-${index}`} className="max-w-sm self-end rounded-2xl rounded-br-sm bg-primary p-3 text-sm leading-6 text-primary-foreground">{text}</div>)}</div><form onSubmit={send} className="flex gap-2 border-t border-border p-4"><input value={draft} onChange={(event) => setDraft(event.target.value)} data-testid="input-message-reply" className="min-w-0 flex-1 rounded-xl bg-muted px-4 py-3 text-sm outline-none" placeholder="Write a reply..." /><Button type="submit" disabled={!draft.trim()} className="px-3" data-testid="button-send-message"><Send size={16} /></Button></form></div></div></AppShell>;
+
+  return <AppShell role={owner ? 'owner' : 'tenant'}>
+    <PageHeading eyebrow="Keep it human" title="Messages" copy={owner ? 'Talk directly with people interested in your properties.' : 'Your conversations with property owners, all in one place.'} />
+    {notice && <p role="status" className="mt-4 rounded-xl bg-primary/10 p-3 text-sm text-primary">{notice}</p>}
+    {error && <div role="alert" className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><span>{error}</span><button className="font-bold underline" onClick={() => { setError(''); void loadConversations(); }}>Try again</button></div>}
+    <div className="mt-8 grid min-h-[520px] overflow-hidden rounded-2xl border border-border bg-card md:grid-cols-[minmax(240px,.75fr)_minmax(0,1.25fr)]">
+      <section className={`border-b border-border md:border-b-0 md:border-r ${selectedId ? 'hidden md:block' : 'block'}`}>
+        <div className="border-b border-border px-4 py-4"><h2 className="font-display text-lg font-bold">Your inbox</h2><p className="mt-1 text-xs text-muted-foreground">{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</p></div>
+        {loading ? <div className="space-y-3 p-4"><div className="skeleton h-16 rounded-xl" /><div className="skeleton h-16 rounded-xl" /></div> : conversations.length ? <div className="max-h-[620px] overflow-y-auto">{conversations.map((conversation) => <button key={conversation.id} onClick={() => setSelectedId(conversation.id)} data-testid={`button-conversation-${conversation.id}`} className={`flex w-full items-start gap-3 border-b border-border p-4 text-left transition hover:bg-muted/70 ${selectedId === conversation.id ? 'bg-muted/60' : ''}`}>
+          <img src={conversation.propertyImage || photos[0]} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+          <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-bold">{conversation.otherParticipantName}</span>{conversation.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread messages" />}</span><span className="mt-1 block truncate text-xs font-semibold text-primary">{conversation.propertyTitle}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{conversation.latestMessage?.body || 'Start the conversation'}</span></span>
+        </button>)}</div> : <div className="p-6 text-center"><MessageCircle className="mx-auto text-muted-foreground" size={28} /><h3 className="mt-3 font-bold">No conversations yet</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{owner ? 'When a tenant messages you about a listing, the conversation will appear here.' : 'Open a home listing and choose Message owner to start a conversation.'}</p><Link href="/properties" className="mt-4 inline-flex text-sm font-bold text-primary underline-link">Explore homes <ArrowRight size={14} /></Link></div>}
+      </section>
+      <section className={`min-w-0 flex-col ${selectedId ? 'flex' : 'hidden md:flex'}`}>
+        {selected ? <>
+          <div className="flex items-center gap-3 border-b border-border p-4 sm:p-5"><button className="rounded-lg p-2 hover:bg-muted md:hidden" onClick={() => setSelectedId('')} aria-label="Back to inbox"><ChevronLeft size={18} /></button><img src={selected.propertyImage || photos[0]} alt="" className="h-10 w-10 rounded-xl object-cover" /><div className="min-w-0"><p className="truncate text-sm font-bold">{selected.otherParticipantName}</p><p className="truncate text-xs text-muted-foreground">{selected.propertyTitle}</p></div><span className="ml-auto hidden rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary sm:inline">Homza chat</span></div>
+          <div id="homza-chat-messages" className="flex max-h-[520px] min-h-[300px] flex-1 flex-col gap-3 overflow-y-auto bg-background/40 p-4 sm:p-5">
+            {messages.length ? messages.map((message) => { const mine = message.senderId === currentUser?.id; return <div key={message.id} className={`max-w-[88%] rounded-2xl p-3 sm:max-w-[78%] ${mine ? 'self-end rounded-br-sm bg-primary text-primary-foreground' : 'self-start rounded-bl-sm bg-muted text-foreground'}`}><p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p><p className={`mt-1 text-right text-[10px] ${mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{new Date(message.createdAt).toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' })}</p></div>; }) : <p className="m-auto text-center text-sm text-muted-foreground">No messages yet. Say hello to get the conversation started.</p>}
+          </div>
+          <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3 sm:p-4"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} data-testid="input-message-reply" aria-label="Write a message" className="max-h-32 min-w-0 flex-1 resize-y rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Write a message..." /><Button type="submit" disabled={!draft.trim() || sending} className="h-11 px-3" data-testid="button-send-message">{sending ? <LoaderCircle className="animate-spin" size={16} /> : <Send size={16} />}<span className="hidden sm:inline">Send</span></Button></form>
+        </> : <div className="hidden flex-1 flex-col items-center justify-center p-8 text-center md:flex"><MessageCircle className="text-muted-foreground" size={32} /><h3 className="mt-3 font-display text-lg font-bold">Choose a conversation</h3><p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">Select a conversation to read messages and reply securely.</p></div>}
+      </section>
+    </div>
+  </AppShell>;
 }
 
 function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy?: string; action?: React.ReactNode }) {
