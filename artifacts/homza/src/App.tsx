@@ -364,7 +364,8 @@ function MessagesPage({ owner = false }: { owner?: boolean }) {
 function InteractiveMessagesPage({ owner = false }: { owner?: boolean }) {
   type Conversation = { id: string; propertyId: string; propertyTitle: string; propertyImage?: string | null; otherParticipantName: string; latestMessage: { body: string; createdAt: string; senderId: string } | null; unread: boolean };
   type ChatMessage = { id: string; senderId: string; body: string; createdAt: string };
-  const currentUser = useCurrentUser();
+  const [currentUser, setCurrentUser] = useState<HomzaCurrentUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [, navigate] = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState('');
@@ -404,6 +405,25 @@ function InteractiveMessagesPage({ owner = false }: { owner?: boolean }) {
   };
 
   useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const result = await response.json().catch(() => null);
+        return result?.user ?? null;
+      })
+      .catch(() => null)
+      .then((user) => {
+        if (active) {
+          setCurrentUser(user as HomzaCurrentUser | null);
+          setAuthChecked(true);
+        }
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked) return;
     if (!currentUser) { navigate('/login'); return; }
     if ((owner && currentUser.role !== 'owner') || (!owner && currentUser.role !== 'tenant')) {
       navigate(currentUser.role === 'owner' ? '/owner/messages' : '/dashboard/messages');
@@ -412,7 +432,7 @@ function InteractiveMessagesPage({ owner = false }: { owner?: boolean }) {
     void loadConversations();
     const timer = window.setInterval(() => { void loadConversations(true); }, 15000);
     return () => window.clearInterval(timer);
-  }, [currentUser?.id, currentUser?.role, owner]);
+  }, [authChecked, currentUser?.id, currentUser?.role, owner]);
 
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
