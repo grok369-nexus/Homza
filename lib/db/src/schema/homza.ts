@@ -65,6 +65,15 @@ export const propertyViews = pgTable("homza_property_views", {
   viewedAt: timestamp("viewed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const propertyLeads = pgTable("homza_property_leads", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const favorites = pgTable("homza_favorites", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
