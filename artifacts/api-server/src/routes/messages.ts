@@ -1,9 +1,12 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { Router, type IRouter } from "express";
 import { db, directMessages, messageConversations, properties, users } from "@workspace/db";
 import { requireAuth, requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
+const tenantUsers = alias(users, "tenant");
+const ownerUsers = alias(users, "owner");
 const isUuid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -27,13 +30,12 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
       updatedAt: messageConversations.updatedAt,
       propertyTitle: properties.title,
       propertyImage: properties.image,
-      tenantName: sql<string>`tenant.full_name`,
-      ownerName: sql<string>`owner.full_name`,
+      tenantName: tenantUsers.fullName,
+      ownerName: ownerUsers.fullName,
     }).from(messageConversations)
       .innerJoin(properties, eq(messageConversations.propertyId, properties.id))
-      .innerJoin(users, eq(messageConversations.tenantId, users.id))
-      .innerJoin(sql`homza_users as tenant`, sql`tenant.id = ${messageConversations.tenantId}`)
-      .innerJoin(sql`homza_users as owner`, sql`owner.id = ${messageConversations.ownerId}`)
+      .innerJoin(tenantUsers, eq(messageConversations.tenantId, tenantUsers.id))
+      .innerJoin(ownerUsers, eq(messageConversations.ownerId, ownerUsers.id))
       .where(eq(participantColumn, user.id))
       .orderBy(desc(messageConversations.updatedAt))
       .limit(100);
