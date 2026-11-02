@@ -38,6 +38,10 @@ function publicUser(user: {
   email: string;
   role: string;
   phone: string | null;
+  displayName?: string | null;
+  profilePhoto?: string | null;
+  accountType?: string;
+  preferredContactMethod?: string;
   ownerVerificationStatus: string;
 }) {
   return {
@@ -46,6 +50,10 @@ function publicUser(user: {
     email: user.email,
     role: user.role,
     phone: user.phone,
+    displayName: user.displayName ?? null,
+    profilePhoto: user.profilePhoto ?? null,
+    accountType: user.accountType ?? "individual_owner",
+    preferredContactMethod: user.preferredContactMethod ?? "homza_chat",
     ownerVerificationStatus: user.ownerVerificationStatus,
   };
 }
@@ -143,6 +151,60 @@ router.post("/auth/logout", async (req, res, next) => {
 
 router.get("/auth/me", requireAuth, (req, res) => {
   return res.json({ user: req.homzaUser });
+});
+
+router.patch("/auth/me", requireAuth, async (req, res, next) => {
+  try {
+    const body = req.body ?? {};
+    const fullName = typeof body.fullName === "string" ? body.fullName.trim() : undefined;
+    const displayName = typeof body.displayName === "string" ? body.displayName.trim() : undefined;
+    const phone = typeof body.phone === "string" ? body.phone.trim() : undefined;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
+    const profilePhoto = typeof body.profilePhoto === "string" ? body.profilePhoto.trim() : undefined;
+    const accountType = body.accountType;
+    const preferredContactMethod = body.preferredContactMethod;
+
+    if (fullName !== undefined && (fullName.length < 2 || fullName.length > 100)) {
+      return res.status(400).json({ error: "Enter your full legal name (2–100 characters)." });
+    }
+    if (displayName !== undefined && displayName.length > 80) {
+      return res.status(400).json({ error: "Display name must be 80 characters or fewer." });
+    }
+    if (email !== undefined && (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254)) {
+      return res.status(400).json({ error: "Enter a valid email address." });
+    }
+    if (phone !== undefined && phone.length > 30) {
+      return res.status(400).json({ error: "Phone number must be 30 characters or fewer." });
+    }
+    if (profilePhoto !== undefined && profilePhoto.length > 2048) {
+      return res.status(400).json({ error: "Profile photo URL is too long." });
+    }
+    if (accountType !== undefined && !["individual_owner", "property_agent", "real_estate_company"].includes(accountType)) {
+      return res.status(400).json({ error: "Choose a valid account type." });
+    }
+    if (preferredContactMethod !== undefined && !["phone", "whatsapp", "homza_chat"].includes(preferredContactMethod)) {
+      return res.status(400).json({ error: "Choose a valid contact method." });
+    }
+
+    const update: Record<string, unknown> = {};
+    if (fullName !== undefined) update.fullName = fullName;
+    if (displayName !== undefined) update.displayName = displayName || null;
+    if (phone !== undefined) update.phone = phone || null;
+    if (email !== undefined) update.email = email;
+    if (profilePhoto !== undefined) update.profilePhoto = profilePhoto || null;
+    if (accountType !== undefined) update.accountType = accountType;
+    if (preferredContactMethod !== undefined) update.preferredContactMethod = preferredContactMethod;
+    if (!Object.keys(update).length) return res.status(400).json({ error: "No profile changes were provided." });
+
+    const [user] = await db.update(users).set(update).where(eq(users.id, req.homzaUser!.id)).returning();
+    if (!user) return res.status(404).json({ error: "Account not found." });
+    return res.json({ user: publicUser(user) });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      return res.status(409).json({ error: "That email address is already in use." });
+    }
+    return next(error);
+  }
 });
 
 export default router;

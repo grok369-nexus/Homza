@@ -197,7 +197,7 @@ router.patch("/properties/:id", requireAuth, requireRole("owner", "admin"), asyn
       }
     } else if (["rented", "paused", "hidden"].includes(String(input.status))) {
       update.status = input.status as "rented" | "paused" | "hidden";
-    } else if (input.status === "available" && existing.property.verified) {
+    } else if (input.status === "available") {
       update.status = "available";
     }
 
@@ -244,7 +244,7 @@ router.post("/owner/properties", requireAuth, requireRole("owner"), async (req, 
       images: data.image ? [data.image] : [],
       description: data.description ?? "",
       amenities: data.amenities,
-      status: "pending",
+      status: "available",
       verified: false,
     }).returning();
     const record = await propertyWithOwner(created.id);
@@ -338,7 +338,7 @@ router.patch("/admin/properties/:id/review", requireAuth, requireRole("admin"), 
   }
 });
 
-router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/owners/:id/verification", "/dashboard/admin/owners/:id/verification"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const status = req.body?.status;
@@ -357,7 +357,7 @@ router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin")
 });
 
 
-router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/reports/:id", "/dashboard/admin/reports/:id"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const status = req.body?.status;

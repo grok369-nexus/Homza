@@ -100,8 +100,31 @@ router.get("/dashboard/owner", requireAuth, requireRole("owner"), async (req, re
   }
 });
 
-router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
+    const view = typeof req.query.view === "string" ? req.query.view : "";
+    if (view === "users") {
+      const rows = await db.select({
+        id: users.id, fullName: users.fullName, email: users.email, role: users.role,
+        phone: users.phone, ownerVerificationStatus: users.ownerVerificationStatus, createdAt: users.createdAt,
+      }).from(users).orderBy(desc(users.createdAt)).limit(200);
+      return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+    }
+    if (view === "owners") {
+      const rows = await db.select({
+        id: users.id, fullName: users.fullName, email: users.email, phone: users.phone,
+        ownerVerificationStatus: users.ownerVerificationStatus, createdAt: users.createdAt,
+      }).from(users).where(eq(users.role, "owner")).orderBy(desc(users.createdAt)).limit(200);
+      return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+    }
+    if (view === "reports") {
+      const rows = await db.select({
+        id: reports.id, propertyId: reports.propertyId, reason: reports.reason, status: reports.status,
+        createdAt: reports.createdAt, propertyTitle: properties.title, location: properties.location,
+      }).from(reports).innerJoin(properties, eq(reports.propertyId, properties.id))
+        .orderBy(desc(reports.createdAt)).limit(200);
+      return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
+    }
     const [userCount] = await db.select({ value: count() }).from(users);
     const [tenantCount] = await db.select({ value: count() }).from(users).where(eq(users.role, "tenant"));
     const [ownerCount] = await db.select({ value: count() }).from(users).where(eq(users.role, "owner"));
@@ -115,7 +138,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
       submittedAt: users.createdAt,
       status: users.ownerVerificationStatus,
     }).from(users).where(and(eq(users.role, "owner"), inArray(users.ownerVerificationStatus, ["unverified", "pending"]))).orderBy(desc(users.createdAt)).limit(50);
-    const moderationQueue = await listedProperties(eq(properties.status, "pending"));
+    // Property listings are published immediately; admin review focuses on owner identity and reports.
     return res.json({
       totalUsers: userCount.value,
       tenants: tenantCount.value,
@@ -131,7 +154,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
         submittedAt: row.submittedAt.toISOString(),
         status: row.status === "unverified" ? "pending" : row.status,
       })),
-      moderationQueue,
+      moderationQueue: [],
     });
   } catch (error) {
     return next(error);
@@ -139,7 +162,64 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
 });
 
 
-router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.patch("/dashboard/admin", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const action = req.body?.action;
+    const id = typeof req.body?.id === "string" ? req.body.id : "";
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) return res.status(404).json({ error: "Record not found" });
+
+    if (action === "verifyOwner") {
+      const status = req.body?.status;
+      if (status !== "verified" && status !== "pending" && status !== "rejected") {
+        return res.status(400).json({ error: "Status must be verified, pending, or rejected." });
+      }
+      const [updated] = await db.update(users).set({ ownerVerificationStatus: status })
+        .where(and(eq(users.id, id), eq(users.role, "owner")))
+        .returning({ id: users.id, ownerVerificationStatus: users.ownerVerificationStatus });
+      if (!updated) return res.status(404).json({ error: "Owner not found" });
+      return res.json(updated);
+    }
+
+    if (action === "changeRole") {
+      const role = req.body?.role;
+      if (role !== "tenant" && role !== "owner") {
+        return res.status(400).json({ error: "Role must be tenant or owner. Admin access cannot be granted here." });
+      }
+      if (id === req.homzaUser!.id) return res.status(409).json({ error: "You cannot change your own role." });
+      const [target] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, id)).limit(1);
+      if (!target) return res.status(404).json({ error: "User not found" });
+      if (target.role === "admin") return res.status(409).json({ error: "Administrator roles cannot be changed from this screen." });
+      if (target.role === role) return res.status(409).json({ error: "This user already has that role." });
+      const [updated] = await db.update(users).set({
+        role,
+        ownerVerificationStatus: role === "owner" ? "pending" : "unverified",
+      }).where(eq(users.id, id)).returning({
+        id: users.id, fullName: users.fullName, email: users.email, role: users.role,
+        ownerVerificationStatus: users.ownerVerificationStatus,
+      });
+      if (!updated) return res.status(404).json({ error: "User not found" });
+      return res.json(updated);
+    }
+
+    if (action === "updateReport") {
+      const status = req.body?.status;
+      if (status !== "reviewing" && status !== "resolved" && status !== "dismissed") {
+        return res.status(400).json({ error: "Choose reviewing, resolved or dismissed." });
+      }
+      const [updated] = await db.update(reports).set({ status }).where(eq(reports.id, id))
+        .returning({ id: reports.id, status: reports.status });
+      if (!updated) return res.status(404).json({ error: "Report not found" });
+      return res.json(updated);
+    }
+
+    return res.status(400).json({ error: "Unsupported admin action." });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get(["/admin/users", "/dashboard/admin/users"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: users.id,
@@ -156,7 +236,7 @@ router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, 
   }
 });
 
-router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/users/:id/role", "/dashboard/admin/users/:id/role"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const role = req.body?.role;
@@ -193,7 +273,7 @@ router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (
   }
 });
 
-router.get("/admin/owners", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get(["/admin/owners", "/dashboard/admin/owners"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: users.id,
@@ -217,7 +297,7 @@ router.get("/admin/properties", requireAuth, requireRole("admin"), async (_req, 
   }
 });
 
-router.get("/admin/reports", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get(["/admin/reports", "/dashboard/admin/reports"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: reports.id,

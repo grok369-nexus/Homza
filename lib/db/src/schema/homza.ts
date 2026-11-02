@@ -22,6 +22,10 @@ export const users = pgTable("homza_users", {
   passwordHash: text("password_hash").notNull(),
   role: homzaRole("role").notNull().default("tenant"),
   phone: text("phone"),
+  displayName: text("display_name"),
+  profilePhoto: text("profile_photo"),
+  accountType: text("account_type").notNull().default("individual_owner"),
+  preferredContactMethod: text("preferred_contact_method").notNull().default("homza_chat"),
   ownerVerificationStatus: ownerVerificationStatus("owner_verification_status").notNull().default("unverified"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
