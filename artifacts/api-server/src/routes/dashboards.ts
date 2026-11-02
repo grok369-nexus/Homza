@@ -193,27 +193,6 @@ router.patch(["/admin/users/:id/role", "/dashboard/admin/users/:id/role"], requi
   }
 });
 
-router.patch(["/admin/owners/:id/verification", "/dashboard/admin/owners/:id/verification"], requireAuth, requireRole("admin"), async (req, res, next) => {
-  try {
-    const id = typeof req.params.id === "string" ? req.params.id : "";
-    const status = req.body?.status;
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-      return res.status(404).json({ error: "Owner not found" });
-    }
-    if (status !== "verified" && status !== "pending" && status !== "rejected") {
-      return res.status(400).json({ error: "Status must be verified, pending, or rejected." });
-    }
-    const [updated] = await db.update(users)
-      .set({ ownerVerificationStatus: status })
-      .where(and(eq(users.id, id), eq(users.role, "owner")))
-      .returning({ id: users.id, ownerVerificationStatus: users.ownerVerificationStatus });
-    if (!updated) return res.status(404).json({ error: "Owner not found" });
-    return res.json(updated);
-  } catch (error) {
-    return next(error);
-  }
-});
-
 router.get(["/admin/owners", "/dashboard/admin/owners"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
