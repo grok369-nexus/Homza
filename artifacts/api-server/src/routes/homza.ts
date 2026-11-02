@@ -338,7 +338,7 @@ router.patch("/admin/properties/:id/review", requireAuth, requireRole("admin"), 
   }
 });
 
-router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/owners/:id/verification", "/dashboard/admin/owners/:id/verification"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const status = req.body?.status;
@@ -357,7 +357,7 @@ router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin")
 });
 
 
-router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/reports/:id", "/dashboard/admin/reports/:id"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const status = req.body?.status;
