@@ -115,7 +115,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
       submittedAt: users.createdAt,
       status: users.ownerVerificationStatus,
     }).from(users).where(and(eq(users.role, "owner"), inArray(users.ownerVerificationStatus, ["unverified", "pending"]))).orderBy(desc(users.createdAt)).limit(50);
-    const moderationQueue = await listedProperties(eq(properties.status, "pending"));
+    // Property listings are published immediately; admin review focuses on owner identity and reports.
     return res.json({
       totalUsers: userCount.value,
       tenants: tenantCount.value,
@@ -131,7 +131,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
         submittedAt: row.submittedAt.toISOString(),
         status: row.status === "unverified" ? "pending" : row.status,
       })),
-      moderationQueue,
+      moderationQueue: [],
     });
   } catch (error) {
     return next(error);
@@ -187,6 +187,27 @@ router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (
       .where(eq(users.id, id))
       .returning({ id: users.id, fullName: users.fullName, email: users.email, role: users.role, ownerVerificationStatus: users.ownerVerificationStatus });
     if (!updated) return res.status(404).json({ error: "User not found" });
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id : "";
+    const status = req.body?.status;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      return res.status(404).json({ error: "Owner not found" });
+    }
+    if (status !== "verified" && status !== "pending" && status !== "rejected") {
+      return res.status(400).json({ error: "Status must be verified, pending, or rejected." });
+    }
+    const [updated] = await db.update(users)
+      .set({ ownerVerificationStatus: status })
+      .where(and(eq(users.id, id), eq(users.role, "owner")))
+      .returning({ id: users.id, ownerVerificationStatus: users.ownerVerificationStatus });
+    if (!updated) return res.status(404).json({ error: "Owner not found" });
     return res.json(updated);
   } catch (error) {
     return next(error);
