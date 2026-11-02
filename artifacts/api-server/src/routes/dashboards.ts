@@ -139,7 +139,7 @@ router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (_req, r
 });
 
 
-router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get(["/admin/users", "/dashboard/admin/users"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: users.id,
@@ -156,7 +156,7 @@ router.get("/admin/users", requireAuth, requireRole("admin"), async (_req, res, 
   }
 });
 
-router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/users/:id/role", "/dashboard/admin/users/:id/role"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const role = req.body?.role;
@@ -193,7 +193,7 @@ router.patch("/admin/users/:id/role", requireAuth, requireRole("admin"), async (
   }
 });
 
-router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin"), async (req, res, next) => {
+router.patch(["/admin/owners/:id/verification", "/dashboard/admin/owners/:id/verification"], requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = typeof req.params.id === "string" ? req.params.id : "";
     const status = req.body?.status;
@@ -214,7 +214,7 @@ router.patch("/admin/owners/:id/verification", requireAuth, requireRole("admin")
   }
 });
 
-router.get("/admin/owners", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get(["/admin/owners", "/dashboard/admin/owners"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: users.id,
@@ -238,7 +238,7 @@ router.get("/admin/properties", requireAuth, requireRole("admin"), async (_req, 
   }
 });
 
-router.get("/admin/reports", requireAuth, requireRole("admin"), async (_req, res, next) => {
+router.get(["/admin/reports", "/dashboard/admin/reports"], requireAuth, requireRole("admin"), async (_req, res, next) => {
   try {
     const rows = await db.select({
       id: reports.id,
