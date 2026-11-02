@@ -447,9 +447,109 @@ function OwnerSimplePage({ page, role = 'owner' }: { page: string; role?: 'tenan
     analytics: { eyebrow: 'Understand attention', title: 'Analytics', copy: 'A useful picture of how your listings are performing.', icon: BarChart3, metric: 'Analytics not available yet', detail: 'Reliable analytics will appear when Homza records the activity needed to calculate them.' },
     payments: { eyebrow: 'Your records', title: 'Payment history', copy: 'A clear record of your Homza activity.', icon: CreditCard, metric: 'No payment summary yet', detail: 'Payment records will appear here when payment tracking is connected.' },
     subscription: { eyebrow: 'More signal, less chasing', title: 'Subscription', copy: 'Choose the pace and reach that fits your portfolio.', icon: Zap, metric: 'Subscription status unavailable', detail: 'Your current subscription status will be shown when billing data is connected.' },
-    profile: { eyebrow: 'The person behind the listing', title: role === 'tenant' ? 'Tenant profile' : 'Owner profile', copy: 'Keep your details current so your Homza profile represents you accurately.', icon: User, metric: 'Profile completion needs review', detail: 'We are checking the profile fields before showing a completion score.' }
+    profile: { eyebrow: 'The person behind the listing', title: role === 'tenant' ? 'Tenant profile' : 'Owner profile', copy: 'Keep your details current so your Homza profile represents you accurately.', icon: User, metric: 'Your profile', detail: 'Your legal name is kept private; the display name is what tenants see on your listings.' }
   };
   const item = content[page] || content.analytics;
+  const [form, setForm] = useState({ fullName: '', displayName: '', profilePhoto: '', phone: '', email: '', accountType: 'individual_owner', preferredContactMethod: 'homza_chat', ownerVerificationStatus: 'unverified' });
+  const [loadingProfile, setLoadingProfile] = useState(page === 'profile');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileNotice, setProfileNotice] = useState('');
+
+  useEffect(() => {
+    if (page !== 'profile') return;
+    let active = true;
+    fetch('/api/auth/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not load your profile.');
+        return payload.user;
+      })
+      .then((user) => {
+        if (!active || !user) return;
+        setForm({
+          fullName: user.fullName || '', displayName: user.displayName || '', profilePhoto: user.profilePhoto || '',
+          phone: user.phone || '', email: user.email || '', accountType: user.accountType || 'individual_owner',
+          preferredContactMethod: user.preferredContactMethod || 'homza_chat',
+          ownerVerificationStatus: user.ownerVerificationStatus || 'unverified',
+        });
+      })
+      .catch((error) => { if (active) setProfileError(error instanceof Error ? error.message : 'Could not load your profile.'); })
+      .finally(() => { if (active) setLoadingProfile(false); });
+    return () => { active = false; };
+  }, [page]);
+
+  const saveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingProfile(true); setProfileError(''); setProfileNotice('');
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          fullName: form.fullName, displayName: form.displayName, profilePhoto: form.profilePhoto,
+          phone: form.phone, email: form.email, accountType: form.accountType,
+          preferredContactMethod: form.preferredContactMethod,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Could not save your profile.');
+      const user = payload.user || {};
+      setForm((current) => ({ ...current, fullName: user.fullName ?? current.fullName, displayName: user.displayName ?? '', profilePhoto: user.profilePhoto ?? '', phone: user.phone ?? '', email: user.email ?? current.email, accountType: user.accountType ?? current.accountType, preferredContactMethod: user.preferredContactMethod ?? current.preferredContactMethod, ownerVerificationStatus: user.ownerVerificationStatus ?? current.ownerVerificationStatus }));
+      setProfileNotice('Your profile has been saved.');
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Could not save your profile. Please try again.');
+    } finally { setSavingProfile(false); }
+  };
+
+  const profileField = (key: 'fullName' | 'displayName' | 'profilePhoto' | 'phone' | 'email', label: string, required = false, type = 'text', hint = '') => (
+    <label className="block text-sm font-bold">{label}{required ? ' *' : ''}
+      <input type={type} required={required} maxLength={key === 'profilePhoto' ? 2048 : key === 'fullName' ? 100 : key === 'displayName' ? 80 : key === 'phone' ? 30 : 254}
+        value={form[key]} onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
+        autoComplete={key === 'fullName' ? 'name' : key === 'email' ? 'email' : key === 'phone' ? 'tel' : undefined}
+        className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary"
+      />{hint && <span className="mt-1 block text-xs font-normal text-muted-foreground">{hint}</span>}
+    </label>
+  );
+
+  if (page === 'profile') return <AppShell role={role}>
+    <PageHeading eyebrow={item.eyebrow} title={item.title} copy={item.copy} />
+    {loadingProfile ? <div className="mt-8 rounded-2xl border border-border bg-card p-8 text-sm text-muted-foreground">Loading your profile…</div> : <div className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <form onSubmit={saveProfile} className="rounded-2xl border border-border bg-card p-5 md:p-8">
+        <h2 className="font-display text-xl font-bold">Personal information</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Fields marked * are required. Your full legal name is private and is not shown publicly by default.</p>
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
+          {profileField('fullName', 'Full legal name', true)}
+          {profileField('displayName', 'Display name', false, 'text', 'Optional name shown to tenants on your listings.')}
+          {profileField('phone', 'Phone number', true, 'tel', 'Add a number tenants can reach you on. Phone verification remains a separate step.')}
+          {profileField('email', 'Email address', true, 'email', 'Used for account communication and notifications.')}
+          {profileField('profilePhoto', 'Profile photo URL', false, 'url', 'Paste a direct image link; photo uploads can be added later.')}
+          {role === 'owner' && <label className="block text-sm font-bold">Account type *
+            <select required value={form.accountType} onChange={(event) => setForm((current) => ({ ...current, accountType: event.target.value }))} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+              <option value="individual_owner">Individual Property Owner</option><option value="property_agent">Property Agent</option><option value="real_estate_company">Real Estate Company</option>
+            </select>
+          </label>}
+          {role === 'owner' && <label className="block text-sm font-bold">Preferred contact method
+            <select value={form.preferredContactMethod} onChange={(event) => setForm((current) => ({ ...current, preferredContactMethod: event.target.value }))} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+              <option value="homza_chat">Homza chat</option><option value="phone">Phone call</option><option value="whatsapp">WhatsApp</option>
+            </select>
+          </label>}
+        </div>
+        {profileError && <p role="alert" className="mt-5 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{profileError}</p>}
+        {profileNotice && <p role="status" className="mt-5 rounded-xl bg-primary/5 p-3 text-sm font-semibold text-primary">{profileNotice}</p>}
+        <div className="mt-6 flex justify-end border-t border-border pt-5"><Button type="submit" disabled={savingProfile}>{savingProfile ? <><LoaderCircle className="animate-spin" size={16} /> Saving profile</> : <><Check size={16} /> Save profile</>}</Button></div>
+      </form>
+      <aside className="space-y-4">
+        <div className="rounded-2xl border border-border bg-card p-6 text-center">
+          {form.profilePhoto ? <img src={form.profilePhoto} alt="Profile preview" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="mx-auto h-20 w-20 rounded-full object-cover" /> : <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-secondary text-xl font-bold">{initials(form.displayName || form.fullName || 'H')}</span>}
+          <h3 className="mt-4 font-display text-lg font-bold">{form.displayName || form.fullName || 'Your display name'}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">{role === 'owner' ? 'Public profile preview' : 'Your account profile'}</p>
+          {role === 'owner' && <span className="mt-4 inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-bold capitalize">{form.ownerVerificationStatus === 'verified' ? 'Verified owner' : 'Owner not yet verified'}</span>}
+        </div>
+        {role === 'owner' && <div className="rounded-2xl border border-border bg-secondary/25 p-5"><ShieldCheck className="text-primary" size={20} /><h3 className="mt-3 font-bold">Verification is separate</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Completing your profile does not grant a verified badge. Homza verifies owners separately.</p></div>}
+      </aside>
+    </div>}
+  </AppShell>;
   return <AppShell role={role}><PageHeading eyebrow={item.eyebrow} title={item.title} copy={item.copy} /><div className="mt-8 grid gap-5 md:grid-cols-[.8fr_1.2fr]"><div className="rounded-2xl border border-border bg-primary p-6 text-primary-foreground"><item.icon className="text-secondary" size={23} /><p className="mt-12 font-display text-2xl font-bold">{item.metric}</p><p className="mt-2 text-sm text-primary-foreground/65">Based on connected account data</p></div><div className="rounded-2xl border border-border bg-card p-6"><h2 className="font-display text-xl font-bold">{role === 'tenant' ? 'Your Homza activity' : 'Your workspace'}</h2><p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">{item.detail}</p>{role === 'tenant' && <div className="mt-8 space-y-3"><div className="flex items-center justify-between rounded-xl bg-muted p-4 text-sm"><span className="font-semibold">Reach this month</span><span className="font-semibold text-muted-foreground">Not enough verified data</span></div><div className="flex items-center justify-between rounded-xl bg-muted p-4 text-sm"><span className="font-semibold">Response quality</span><span className="font-semibold text-muted-foreground">Not enough verified data</span></div></div>}</div></div></AppShell>;
 }
 
