@@ -186,7 +186,7 @@ function PropertiesPage() {
   const [bedrooms, setBedrooms] = useState('');
   const [advanceMonths, setAdvanceMonths] = useState('');
   const [amenity, setAmenity] = useState('');
-  const [sort, setSort] = useState<'recommended' | 'lowest' | 'highest' | 'newest' | 'viewed'>('recommended');
+  const [sort, setSort] = useState<'recommended' | 'lowest' | 'highest' | 'newest' | 'viewed'>(params.get('sort') === 'newest' || params.get('sort') === 'lowest' || params.get('sort') === 'highest' || params.get('sort') === 'viewed' ? params.get('sort') as 'newest' | 'lowest' | 'highest' | 'viewed' : 'recommended');
   const filters = useMemo(() => ({
     location: location || undefined,
     type: type || undefined,
