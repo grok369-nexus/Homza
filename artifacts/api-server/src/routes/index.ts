@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import homzaRouter from "./homza";
 import dashboardsRouter from "./dashboards";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(homzaRouter);
 router.use(dashboardsRouter);
+router.use(messagesRouter);
 
 export default router;
