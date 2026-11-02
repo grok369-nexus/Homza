@@ -197,7 +197,7 @@ router.patch("/properties/:id", requireAuth, requireRole("owner", "admin"), asyn
       }
     } else if (["rented", "paused", "hidden"].includes(String(input.status))) {
       update.status = input.status as "rented" | "paused" | "hidden";
-    } else if (input.status === "available" && existing.property.verified) {
+    } else if (input.status === "available") {
       update.status = "available";
     }
 
@@ -244,7 +244,7 @@ router.post("/owner/properties", requireAuth, requireRole("owner"), async (req, 
       images: data.image ? [data.image] : [],
       description: data.description ?? "",
       amenities: data.amenities,
-      status: "pending",
+      status: "available",
       verified: false,
     }).returning();
     const record = await propertyWithOwner(created.id);
