@@ -478,10 +478,10 @@ function AdminPage({ page }: { page: string }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const endpoint: Record<string, string> = {
-    users: '/api/admin/users',
-    owners: '/api/admin/owners',
+    users: '/api/dashboard/admin?view=users',
+    owners: '/api/dashboard/admin?view=owners',
     verification: '/api/dashboard/admin',
-    reports: '/api/admin/reports'
+    reports: '/api/dashboard/admin?view=reports'
   };
 
   const loadRows = async (activeCheck?: () => boolean) => {
@@ -527,11 +527,11 @@ function AdminPage({ page }: { page: string }) {
     let url = '';
     let body: Record<string, string> = {};
     if (page === 'verification' || page === 'owners') {
-      url = `/api/admin/owners/${encodeURIComponent(row.id)}/verification`;
-      body = { status: action === 'approve' ? 'verified' : action === 'review' ? 'pending' : 'rejected' };
+      url = '/api/dashboard/admin';
+      body = { action: 'verifyOwner', id: row.id, status: action === 'approve' ? 'verified' : action === 'review' ? 'pending' : 'rejected' };
     } else if (page === 'reports') {
-      url = `/api/admin/reports/${encodeURIComponent(row.id)}`;
-      body = { status: action === 'resolve' ? 'resolved' : action === 'dismiss' ? 'dismissed' : 'reviewing' };
+      url = '/api/dashboard/admin';
+      body = { action: 'updateReport', id: row.id, status: action === 'resolve' ? 'resolved' : action === 'dismiss' ? 'dismissed' : 'reviewing' };
     } else {
       setBusy(null);
       return;
@@ -561,10 +561,10 @@ function AdminPage({ page }: { page: string }) {
     setError('');
     setNotice('');
     try {
-      const response = await fetch(`/api/admin/users/${encodeURIComponent(row.id)}/role`, {
+      const response = await fetch('/api/dashboard/admin', {
         method: 'PATCH', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ action: 'changeRole', id: row.id, role }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `Role update failed (HTTP ${response.status}).`);
